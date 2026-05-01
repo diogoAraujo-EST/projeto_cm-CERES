@@ -86,7 +86,6 @@ class PlantDetailsScreen extends StatelessWidget {
                       onPressed: () {
                         print("A planta $plantName foi regada!"); 
                         
-                        // Opcional: mostrar um aviso temporáriozinho na app (Snackbar)
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Planta regada!')),
                         );

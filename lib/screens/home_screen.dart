@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'plant_screen_details.dart';
+import 'plant_details_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
