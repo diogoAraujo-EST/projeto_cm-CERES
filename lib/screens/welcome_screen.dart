@@ -1,6 +1,5 @@
-// lib/screens/welcome_screen.dart
 import 'package:flutter/material.dart';
-import 'main_nav_screen.dart'; // O ecrã a seguir (pode estar vazio nesta fase)
+import 'main_nav_screen.dart'; 
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -24,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green, // Cor padrão
+                  color: Colors.green,
                 ),
               ),
               const SizedBox(height: 20),
@@ -47,7 +46,7 @@ class WelcomeScreen extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green, // Cor padrão
+                    backgroundColor: Colors.green, 
                     padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
                   child: const Text('Começar', style: TextStyle(color: Colors.white)),
