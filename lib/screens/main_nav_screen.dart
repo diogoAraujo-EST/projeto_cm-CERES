@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:projeto_cm/screens/profile_screen.dart';
 import 'home_screen.dart';
+import 'statistics_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -17,7 +18,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
     const HomeScreen(),
     const Center(child: Text("Página das Plantas")),
     const Center(child: Text("Calendário (Em construção)")),
-    const Center(child: Text("Estatísticas (Em construção)")),
+    const StatisticsScreen(),
     const ProfileScreen(),
   ];
 
