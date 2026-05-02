@@ -59,7 +59,12 @@ class WelcomeScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                      Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MainNavScreen()),
+                    );
+                  },
                   child: const Text('Já tenho conta', style: TextStyle(color: Colors.green)),
                 ),
               ),

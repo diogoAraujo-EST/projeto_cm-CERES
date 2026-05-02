@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:projeto_cm/screens/profile_screen.dart';
 import 'home_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
     const Center(child: Text("Página das Plantas")),
     const Center(child: Text("Calendário (Em construção)")),
     const Center(child: Text("Estatísticas (Em construção)")),
-    const Center(child: Text("Perfil do Utilizador")),
+    const ProfileScreen(),
   ];
 
   @override
