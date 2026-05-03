@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
 import 'plant_details_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -8,89 +9,133 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         children: [
-          // Header Simples
-          const Text(
-            'Olá, Mariana!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Olá, Mariana!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                      const SizedBox( width: 4,),
+                      Transform.translate(
+                        offset: const Offset(0, -5),
+                        child: Image.asset(
+                        'assets/images/ceres_logo_only_2.png',
+                        height: 30,
+                        ),
+                      )
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 4),
+                  Text('Aqui está o resumo das tuas plantas.', style: TextStyle(fontSize: 14, color: CERESColors.textSecondary)),
+                
+                
+                
+                ],
+                
+              ),
+              Container(
+                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade200)),
+                child: IconButton(icon: const Icon(Icons.notifications_none, color: CERESColors.textMain), onPressed: () {}),
+              )
+            ],
           ),
-          const Text(
-            'Aqui está o resumo das tuas plantas.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
-          ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 32),
 
+          const Text('Hoje', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+          const SizedBox(height: 16),
 
-          const Text('Hoje', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-
-          //alerta da rega
           Container(
-            padding: const EdgeInsets.all(15),
-            color: Colors.blue.shade50,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
             child: const Row(
               children: [
-                Icon(Icons.water_drop, color: Colors.blue),
-                SizedBox(width: 10),
-                Text('2 plantas precisam de rega'),
+                Icon(Icons.water_drop, color: Colors.lightBlue, size: 28),
+                SizedBox(width: 16),
+                Text('2 plantas precisam de rega', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: CERESColors.textMain)),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // cartão2
-          _buildBasicPlantCard(context,'Monstera', 'Precisa de rega', 'Última rega: há 2 dias', true),
-          const SizedBox(height: 10),
-          _buildBasicPlantCard(context,'Ficus Lyrata', 'Precisa de rega', 'Última rega: há 1 dia', true),
-
-          const SizedBox(height: 30),
-          const Text('Próximas regas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-
-          // cartão1
-          _buildBasicPlantCard(context, 'Samambaia', 'Amanhã', '', false),
-          const SizedBox(height: 10),
-          _buildBasicPlantCard(context, 'Suculenta', 'Em 2 dias', '', false),
+          _buildPlantCard(context, 'Monstera', 'Precisa de rega', 'Última rega: há 2 dias', true),
+          const SizedBox(height: 12),
+          _buildPlantCard(context, 'Ficus Lyrata', 'Precisa de rega', 'Última rega: há 1 dia', true),
+          
+          const SizedBox(height: 32),
+          const Text('Próximas regas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+          const SizedBox(height: 16),
+          
+          _buildPlantCard(context, 'Samambaia', 'Amanhã', '', false),
+          const SizedBox(height: 12),
+          _buildPlantCard(context, 'Suculenta', 'Em 2 dias', '', false),
+          
+          const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-Widget _buildBasicPlantCard(BuildContext context, String title, String status, String subtitle, bool isUrgent) {
+  Widget _buildPlantCard(BuildContext context, String title, String status, String subtitle, bool isUrgent) {
     return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // ir para os detalhes da planta
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PlantDetailsScreen(
-              plantName: title, 
+              plantName: title,
               plantStatus: status,
+              lastWatered: subtitle,
+              isUrgent: isUrgent,
             ),
           ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
         ),
         child: Row(
           children: [
-            const Icon(Icons.image, size: 50, color: Colors.grey), 
-            const SizedBox(width: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(
-                  status, 
-                  style: TextStyle(color: isUrgent ? Colors.orange : Colors.black),
-                ),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
+            Container(
+              width: 60, height: 60,
+              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.park, color: Colors.grey),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: CERESColors.textMain)),
+                  const SizedBox(height: 4),
+                  Text(
+                    status, 
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600, 
+                      fontSize: 14, 
+                      color: isUrgent ? const Color(0xFFD9774B) : CERESColors.textMain, 
+                    )
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: CERESColors.textSecondary)),
+                  ]
+                ],
+              ),
             )
           ],
         ),

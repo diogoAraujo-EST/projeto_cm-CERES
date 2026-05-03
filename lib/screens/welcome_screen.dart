@@ -15,7 +15,7 @@ class WelcomeScreen extends StatelessWidget {
       body: Stack(
         children: [
           Positioned(
-            left: -screenWidth * 0.20, 
+            left: -screenWidth * 0.85, 
             top: screenHeight * 0.10, 
             bottom: screenHeight * 0.35, 
             child: Image.asset(
@@ -27,16 +27,17 @@ class WelcomeScreen extends StatelessWidget {
           Positioned(
             right: 24,
             top: screenHeight * 0.25,
-            width: screenWidth * 0.55, 
+            width: screenWidth * 0.52, 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.eco_outlined, 
-                  color: CERESColors.primaryDarkGreen, 
-                  size: 32
+                Image.asset(
+                  'assets/images/ceres_logo_only_2.png',
+                   height: 80,
+                  width: 60,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 16),
+
                 
                 RichText(
                   text: const TextSpan(

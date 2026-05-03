@@ -47,7 +47,7 @@ class ProfileScreen extends StatelessWidget {
                 (Route<dynamic> route) => false, // apaga as screens anteriores
               );
             }, isDestructive: true),
-        ],
+         ],
       ),
     );
   }
@@ -57,7 +57,7 @@ class ProfileScreen extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isDestructive ? Colors.red.withOpacity(0.1) : CERESColors.primaryDarkGreen.withOpacity(0.1),
+          color: isDestructive ? Colors.red.withValues(alpha: 0.1) : CERESColors.primaryDarkGreen.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: isDestructive ? Colors.red : CERESColors.primaryDarkGreen),
