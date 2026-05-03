@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:projeto_cm/screens/Welcome_screen.dart';
+import 'package:projeto_cm/screens/welcome_screen.dart';
+import '../constants/colors.dart';
+
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -8,77 +10,61 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         children: [
-          const Text(
-            'Perfil',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 30),
+          const Text('Perfil', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+          const SizedBox(height: 32),
           
-          // Avatar e Nome Hardcoded
+          // Avatar e Nome
           Center(
             child: Column(
               children: [
                 const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.green, // Cor básica
-                  child: Text(
-                    'M',
-                    style: TextStyle(fontSize: 30, color: Colors.white),
-                  ),
+                  radius: 50,
+                  backgroundColor: CERESColors.primaryDarkGreen,
+                  child: Text('M', style: TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Mariana',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'marianateste@plantas.com',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                ),
+                const SizedBox(height: 16),
+                const Text('Mariana', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                Text('mariana@plantteste.com', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
               ],
             ),
           ),
           const SizedBox(height: 40),
 
-          const ListTile(
-            leading: Icon(Icons.eco, color: Colors.green),
-            title: Text('As minhas plantas'),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          ),
-          const Divider(),
-
-          const ListTile(
-            leading: Icon(Icons.settings, color: Colors.green),
-            title: Text('Configurações'),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          ),
-          const Divider(),
-
-          const ListTile(
-            leading: Icon(Icons.help_outline, color: Colors.green),
-            title: Text('Ajuda e Suporte'),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          ),
+          // Menu de Opções
+          _buildMenuTile(Icons.eco, 'As minhas plantas', () {}),
+          _buildMenuTile(Icons.settings, 'Configurações', () {}),
+          _buildMenuTile(Icons.help_outline, 'Ajuda e Suporte', () {}),
           
-          const SizedBox(height: 30),
+          const Divider(height: 40),
           
-          //Logout
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Sair da Conta', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              // Apaga o histórico todo e volta para o ecrã de início de sessão
+          _buildMenuTile(Icons.logout, 'Sair da Conta', () {
+              // volta para o inicio
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                (Route<dynamic> route) => false, // O 'false' destrói as páginas anteriores
+                (Route<dynamic> route) => false, // apaga as screens anteriores
               );
-            },
-          ),
+            }, isDestructive: true),
         ],
       ),
+    );
+  }
+
+  Widget _buildMenuTile(IconData icon, String title, VoidCallback onTap, {bool isDestructive = false}) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isDestructive ? Colors.red.withOpacity(0.1) : CERESColors.primaryDarkGreen.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: isDestructive ? Colors.red : CERESColors.primaryDarkGreen),
+      ),
+      title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: isDestructive ? Colors.red : CERESColors.textMain)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }
