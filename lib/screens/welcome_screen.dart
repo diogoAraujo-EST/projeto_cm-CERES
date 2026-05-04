@@ -76,18 +76,6 @@ class WelcomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min, 
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildDot(true),
-                      const SizedBox(width: 8),
-                      _buildDot(false),
-                      const SizedBox(width: 8),
-                      _buildDot(false),
-                    ],
-                  ),
-                  const SizedBox(height: 40),
-                  
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -128,14 +116,4 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDot(bool isActive) {
-    return Container(
-      width: 8, 
-      height: 8,
-      decoration: BoxDecoration(
-        color: isActive ? CERESColors.primaryDarkGreen : Colors.grey.shade300,
-        shape: BoxShape.circle,
-      ),
-    );
-  }
 }

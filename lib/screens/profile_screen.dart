@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 //import 'package:projeto_cm/screens/welcome_screen.dart';
-import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 
 
