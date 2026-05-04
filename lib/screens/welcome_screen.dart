@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
-import 'main_nav_screen.dart'; 
+import 'package:go_router/go_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -92,10 +92,8 @@ class WelcomeScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MainNavScreen()),
-                        );
+                        // Navega para o ecrã principal (com a navBar)
+                        context.go('/home');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CERESColors.primaryDarkGreen,
