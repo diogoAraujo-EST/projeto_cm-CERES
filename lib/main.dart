@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+
 // ecrãs da aplicaçãp
+import 'screens/calendar_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_nav_screen.dart';
 import 'screens/home_screen.dart';
@@ -36,9 +38,9 @@ final GoRouter _router = GoRouter(
         StatefulShellBranch(
           routes: [GoRoute(path: '/plants', builder: (context, state) => const Center(child: Text("Página das Plantas")))],
         ),
-        // Separador 2: Calendário POR FAZER - AINDA NÃO TEMOS O ECRÃ PRONTO, POR ISSO VAMOS USAR UM PLACEHOLDER
+        // Separador 2: Calendaario
         StatefulShellBranch(
-          routes: [GoRoute(path: '/calendar', builder: (context, state) => const Center(child: Text("Calendário")))],
+          routes: [GoRoute(path: '/calendar', builder: (context, state) => const CalendarScreen())],
         ),
         // Separador 3: Estatísticas POR FAZER - ECRÃ EXISTE, MAS NÃO TEM "FUNCIONALIZADES"
         StatefulShellBranch(
