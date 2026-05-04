@@ -1,46 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:projeto_cm/screens/profile_screen.dart';
-import 'home_screen.dart';
-import 'statistics_screen.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 
-class MainNavScreen extends StatefulWidget {
-  const MainNavScreen({super.key});
+class MainNavScreen extends StatelessWidget {
 
-  @override
-  State<MainNavScreen> createState() => _MainNavScreenState();
-}
+  final StatefulNavigationShell navigationShell;
 
-class _MainNavScreenState extends State<MainNavScreen> {
-  int _selectedIndex = 0;
-
-  // Lista de ecrãs
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const Center(child: Text("Página das Plantas (Em construção)")),
-    const Center(child: Text("Calendário (Em construção)")),
-    const StatisticsScreen(),
-    const ProfileScreen(),
-  ];
+  const MainNavScreen({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _screens[_selectedIndex],
-      floatingActionButton: _selectedIndex == 0 ? FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Nova Planta!!!')),
-          );
-        },
-          backgroundColor: CERESColors.primaryDarkGreen,
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: const Icon(Icons.add, color: Colors.white, size: 28,),  
-        ) : null,
+      body: navigationShell,
       
-      // Bottom Navigation Bar
+      floatingActionButton: navigationShell.currentIndex == 0 
+        ? FloatingActionButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Nova Planta!!!')),
+              );
+            },
+            backgroundColor: CERESColors.primaryDarkGreen,
+            shape: const CircleBorder(),
+            elevation: 4,
+            child: const Icon(Icons.add, color: Colors.white, size: 28),  
+          ) 
+        : null,
+      
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -56,14 +43,20 @@ class _MainNavScreenState extends State<MainNavScreen> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           elevation: 0,
-          currentIndex: _selectedIndex,
+          currentIndex: navigationShell.currentIndex,
           selectedItemColor: CERESColors.primaryDarkGreen,
           unselectedItemColor: Colors.grey.shade400,
           showSelectedLabels: true,
           showUnselectedLabels: true,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
           unselectedLabelStyle: const TextStyle(fontSize: 10),
-          onTap: (index) => setState(() => _selectedIndex = index),
+          onTap: (index) {
+            navigationShell.goBranch(
+              index,
+              // se clicares na pagina e já la tiveres, faz scroll para o topo, se clicares numa pagina diferente, vai para a pagina
+              initialLocation: index == navigationShell.currentIndex,
+            );
+          },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Início'),
             BottomNavigationBarItem(icon: Icon(Icons.eco_outlined), label: 'Plantas'),

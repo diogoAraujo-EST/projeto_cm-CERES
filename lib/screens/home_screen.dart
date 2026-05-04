@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import 'plant_details_screen.dart';
+import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -89,17 +90,15 @@ class HomeScreen extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PlantDetailsScreen(
-              plantName: title,
-              plantStatus: status,
-              lastWatered: subtitle,
-              isUrgent: isUrgent,
-            ),
-          ),
-        );
+        // Navega para os detalhes da planta, passando os dados necessários
+        context.push(
+          '/plant-details', 
+        extra: {
+          'name': title,
+          'status': status,
+          'lastWatered': subtitle,
+          'isUrgent': isUrgent,
+        });
       },
       child: Container(
         padding: const EdgeInsets.all(16),
