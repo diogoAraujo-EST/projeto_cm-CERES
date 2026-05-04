@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:projeto_cm/screens/welcome_screen.dart';
+import 'package:go_router/go_router.dart';
+//import 'package:projeto_cm/screens/welcome_screen.dart';
+import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 
 
@@ -41,11 +43,7 @@ class ProfileScreen extends StatelessWidget {
           
           _buildMenuTile(Icons.logout, 'Sair da Conta', () {
               // volta para o inicio
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                (Route<dynamic> route) => false, // apaga as screens anteriores
-              );
+            context.go('/');
             }, isDestructive: true),
          ],
       ),
