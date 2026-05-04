@@ -98,7 +98,10 @@ class WelcomeScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        // Navega para o ecrã principal (com a navBar)
+                        context.go('/home');
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         side: BorderSide(color: Colors.grey.shade300, width: 1.5), 
