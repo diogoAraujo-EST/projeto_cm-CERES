@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
-import 'plant_details_screen.dart';
 import 'package:go_router/go_router.dart';
 
 class HomeScreen extends StatelessWidget {
