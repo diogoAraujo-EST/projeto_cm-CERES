@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/colors.dart';
 import '../models/plant_species.dart';
 import '../models/room.dart';
@@ -20,7 +22,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   final _nicknameController = TextEditingController();
   final _searchController = TextEditingController();
   
-  // Serviços
   final _apiService = PlantApiService();
   final _firestoreService = FirestoreService();
   
@@ -28,15 +29,15 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
 
   List<PlantSpecies> _speciesList = [];
   bool _isLoadingSpecies = true;
-  bool _isSaving = false; // Controlo de loading ao guardar na base de dados
+  bool _isSaving = false;
   
   PlantSpecies? _selectedSpecies;
   Room? _selectedRoom;
+  File? _selectedImage; // A foto tirada pelo utilizador
 
   @override
   void initState() {
     super.initState();
-    // Carrega a lista completa da API ao abrir o ecrã
     _loadSpecies(''); 
   }
 
@@ -46,6 +47,45 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     _searchController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    Navigator.pop(context); // Fecha o modal
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 800);
+    
+    if (pickedFile != null) {
+      setState(() => _selectedImage = File(pickedFile.path));
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Adicionar foto da Planta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: CERESColors.primaryDarkGreen),
+              title: const Text('Tirar foto'),
+              onTap: () => _pickImage(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: CERESColors.primaryDarkGreen),
+              title: const Text('Escolher da Galeria'),
+              onTap: () => _pickImage(ImageSource.gallery),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadSpecies(String query) async {
@@ -72,6 +112,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   }
 
   void _showCreateRoomSheet() {
+    // ... Código inalterado ...
     final nameController = TextEditingController();
     String selectedLight = 'Luz Média';
     bool isExterior = false;
@@ -84,7 +125,6 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
-
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -96,25 +136,20 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
-                      child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-                    ),
+                    Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
                     const SizedBox(height: 20),
                     const Text('Criar Nova Divisão 🏠', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                     const SizedBox(height: 20),
-
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
                         hintText: 'Ex: Escritório, Varanda...',
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
+                        filled: true, fillColor: Colors.grey.shade50,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: CERESColors.primaryDarkGreen, width: 2)),
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     const Text('Nível de Iluminação', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
@@ -125,14 +160,9 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       onChanged: (val) {
                         if (val != null) setModalState(() => selectedLight = val);
                       },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                      decoration: InputDecoration(filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                     ),
                     const SizedBox(height: 16),
-
                     SwitchListTile(
                       title: const Text('É um espaço exterior?', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                       activeColor: CERESColors.primaryDarkGreen,
@@ -140,16 +170,12 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       onChanged: (val) => setModalState(() => isExterior = val),
                     ),
                     const SizedBox(height: 24),
-
                     ElevatedButton(
                       onPressed: () async {
                         final name = nameController.text.trim();
                         if (name.isNotEmpty) {
-                          // LIGAÇÃO AO FIREBASE: Guarda a divisão na cloud!
                           await _firestoreService.addRoom(name, selectedLight, isExterior);
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                          }
+                          if (context.mounted) Navigator.pop(context);
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -191,9 +217,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         ? _nicknameController.text.trim() 
         : _selectedSpecies!.name;
 
-    // LIGAÇÃO AO FIREBASE: Constrói a planta com os dados da API do teu colega
     final newPlant = UserPlant(
-      id: '', // Firebase gera automaticamente
+      id: '', 
       userId: user.uid,
       nickname: finalNickname,
       speciesName: _selectedSpecies!.name,
@@ -201,13 +226,14 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
       wateringInterval: _selectedSpecies!.defaultWateringInterval,
       lastWatered: DateTime.now(),
       roomName: _selectedRoom!.name,
-      wateringHistory: [DateTime.now()], // Registo inicial para as Estatísticas funcionarem!
+      wateringHistory: [DateTime.now()],
     );
 
     try {
-      await _firestoreService.addPlant(newPlant);
+      // Passamos também o ficheiro da imagem opcional
+      await _firestoreService.addPlant(newPlant, imageFile: _selectedImage);
       if (mounted) {
-        _showSnackBar('🌿 $finalNickname adicionada com sucesso à divisão ${_selectedRoom!.name}!', CERESColors.primaryDarkGreen);
+        _showSnackBar('🌿 $finalNickname adicionada com sucesso!', CERESColors.primaryDarkGreen);
         context.pop();
       }
     } catch (e) {
@@ -218,9 +244,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, behavior: SnackBarBehavior.floating),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: color, behavior: SnackBarBehavior.floating));
   }
 
   @override
@@ -228,8 +252,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: Colors.white, elevation: 0,
         title: const Text('Adicionar Planta', style: TextStyle(color: CERESColors.textMain, fontWeight: FontWeight.bold)),
         centerTitle: true,
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: CERESColors.textMain), onPressed: () => context.pop()),
@@ -239,14 +262,31 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // AVATAR FOTO DA PLANTA
+            Center(
+              child: GestureDetector(
+                onTap: _showImageSourceDialog,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.1),
+                  backgroundImage: _selectedImage != null ? FileImage(_selectedImage!) : null,
+                  child: _selectedImage == null
+                      ? const Icon(Icons.add_a_photo, size: 40, color: CERESColors.primaryDarkGreen)
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Center(child: Text('Foto (Opcional)', style: TextStyle(color: CERESColors.textSecondary))),
+            const SizedBox(height: 24),
+
             const Text('Nome da Planta (Opcional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
             const SizedBox(height: 8),
             TextField(
               controller: _nicknameController,
               decoration: InputDecoration(
                 hintText: 'Ex: A minha Monstera, Fred...',
-                filled: true,
-                fillColor: Colors.grey.shade50,
+                filled: true, fillColor: Colors.grey.shade50,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: CERESColors.primaryDarkGreen, width: 2)),
@@ -260,16 +300,12 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
               controller: _searchController,
               onChanged: _onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'Escreva o nome da planta...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                hintText: 'Escreva o nome da planta...', prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
               ),
             ),
             const SizedBox(height: 12),
 
-            // Carrossel horizontal de espécies (UI do teu colega mantida!)
             SizedBox(
               height: 140,
               child: _isLoadingSpecies
@@ -284,12 +320,9 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                             final isSelected = _selectedSpecies?.id == species.id;
 
                             return GestureDetector(
-                              onTap: () {
-                                setState(() => _selectedSpecies = species);
-                              },
+                              onTap: () => setState(() => _selectedSpecies = species),
                               child: Container(
-                                width: 110,
-                                margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+                                width: 110, margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
                                 decoration: BoxDecoration(
                                   color: isSelected ? CERESColors.primaryDarkGreen.withValues(alpha: 0.08) : Colors.white,
                                   borderRadius: BorderRadius.circular(16),
@@ -300,22 +333,12 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                                     Expanded(
                                       child: ClipRRect(
                                         borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
-                                        child: Image.network(
-                                          species.imageUrl, 
-                                          fit: BoxFit.cover, 
-                                          width: double.infinity,
-                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.shade200, child: const Icon(Icons.park, color: Colors.grey)),
-                                        ),
+                                        child: Image.network(species.imageUrl, fit: BoxFit.cover, width: double.infinity, errorBuilder: (c, e, s) => Container(color: Colors.grey.shade200, child: const Icon(Icons.park, color: Colors.grey))),
                                       ),
                                     ),
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                                      child: Text(
-                                        species.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: CERESColors.textMain),
-                                      ),
+                                      child: Text(species.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: CERESColors.textMain)),
                                     ),
                                   ],
                                 ),
@@ -325,12 +348,10 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                         ),
             ),
 
-            // Detalhes da espécie selecionada (UI do teu colega mantida!)
             if (_selectedSpecies != null) ...[
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -342,41 +363,15 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
                     Text(_selectedSpecies!.description, style: const TextStyle(fontSize: 13, color: CERESColors.textSecondary, height: 1.4)),
                     const SizedBox(height: 12),
-                    
-                    Row(
-                      children: [
-                        const Icon(Icons.water_drop_outlined, color: Colors.blue, size: 18),
-                        const SizedBox(width: 8),
-                        Text('Rega: A cada ${_selectedSpecies!.defaultWateringInterval} dias', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
+                    Row(children: [const Icon(Icons.water_drop_outlined, color: Colors.blue, size: 18), const SizedBox(width: 8), Text('Rega: A cada ${_selectedSpecies!.defaultWateringInterval} dias', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600))]),
                     const SizedBox(height: 8),
-                    
-                    Row(
-                      children: [
-                        const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 18),
-                        const SizedBox(width: 8),
-                        Text('Luz: ${_selectedSpecies!.lightLevel}', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
+                    Row(children: [const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 18), const SizedBox(width: 8), Text('Luz: ${_selectedSpecies!.lightLevel}', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600))]),
                     const SizedBox(height: 12),
-                    
                     Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: CERESColors.primaryDarkGreen.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.tips_and_updates_outlined, color: CERESColors.primaryDarkGreen, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text('Dica: ${_selectedSpecies!.careInstructions}', style: const TextStyle(fontSize: 13, color: CERESColors.primaryDarkGreen, fontStyle: FontStyle.italic)),
-                          ),
-                        ],
-                      ),
+                      padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: CERESColors.primaryDarkGreen.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.tips_and_updates_outlined, color: CERESColors.primaryDarkGreen, size: 18), const SizedBox(width: 8), Expanded(child: Text('Dica: ${_selectedSpecies!.careInstructions}', style: const TextStyle(fontSize: 13, color: CERESColors.primaryDarkGreen, fontStyle: FontStyle.italic)))]),
                     ),
                   ],
                 ),
@@ -397,56 +392,25 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             ),
             const SizedBox(height: 8),
 
-            // LIGAÇÃO AO FIREBASE: StreamBuilder para ler as divisões em tempo real!
             StreamBuilder<List<Room>>(
               stream: _firestoreService.getUserRooms(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: CERESColors.primaryDarkGreen));
-                }
-
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: CERESColors.primaryDarkGreen));
                 final rooms = snapshot.data ?? [];
-
                 if (rooms.isEmpty) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.amber.shade200),
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.home_work_outlined, color: Colors.amber.shade800),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Ainda não tens nenhuma divisão criada. Cria a tua primeira divisão acima!',
-                            style: TextStyle(color: CERESColors.textMain, fontSize: 13, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12), decoration: BoxDecoration(border: Border.all(color: Colors.amber.shade200), color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12)),
+                    child: Row(children: [Icon(Icons.home_work_outlined, color: Colors.amber.shade800), const SizedBox(width: 12), const Expanded(child: Text('Ainda não tens nenhuma divisão criada. Cria a tua primeira divisão acima!', style: TextStyle(color: CERESColors.textMain, fontSize: 13, fontWeight: FontWeight.w500)))]),
                   );
                 }
-
                 return Wrap(
-                  spacing: 8.0,
-                  runSpacing: 4.0,
+                  spacing: 8.0, runSpacing: 4.0,
                   children: rooms.map((room) {
                     final isSelected = _selectedRoom?.name == room.name;
                     return ChoiceChip(
-                      label: Text(room.name),
-                      selected: isSelected,
-                      selectedColor: CERESColors.primaryDarkGreen,
-                      backgroundColor: Colors.grey.shade50,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : CERESColors.textMain,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      onSelected: (selected) {
-                        setState(() => _selectedRoom = selected ? room : null);
-                      },
+                      label: Text(room.name), selected: isSelected, selectedColor: CERESColors.primaryDarkGreen, backgroundColor: Colors.grey.shade50,
+                      labelStyle: TextStyle(color: isSelected ? Colors.white : CERESColors.textMain, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                      onSelected: (selected) => setState(() => _selectedRoom = selected ? room : null),
                     );
                   }).toList(),
                 );
@@ -458,9 +422,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             ElevatedButton(
               onPressed: _isSaving ? null : _savePlant,
               style: ElevatedButton.styleFrom(
-                backgroundColor: CERESColors.primaryDarkGreen,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: CERESColors.primaryDarkGreen, padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: _isSaving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))

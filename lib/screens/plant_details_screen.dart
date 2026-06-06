@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../constants/colors.dart';
 import '../services/firestore_service.dart';
 
@@ -27,31 +29,88 @@ class PlantDetailsScreen extends StatefulWidget {
 
 class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
   bool _isWatering = false;
+  bool _isUploadingImage = false;
+  late String _currentImageUrl;
   final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Guardamos a imagem num estado local para a UI atualizar quando enviarmos uma nova
+    _currentImageUrl = widget.imageUrl;
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    Navigator.pop(context); // Fecha o modal
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 800);
+      
+      if (pickedFile != null) {
+        setState(() => _isUploadingImage = true);
+        
+        // Faz o upload e recebe o novo URL
+        final newUrl = await _firestoreService.updatePlantImage(widget.plantId, File(pickedFile.path));
+        
+        setState(() {
+          _currentImageUrl = newUrl;
+          _isUploadingImage = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto atualizada!'), backgroundColor: CERESColors.primaryDarkGreen));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erro ao atualizar foto.'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Alterar foto da Planta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: CERESColors.primaryDarkGreen),
+              title: const Text('Tirar foto com a Câmara'),
+              onTap: () => _pickImage(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: CERESColors.primaryDarkGreen),
+              title: const Text('Escolher da Galeria'),
+              onTap: () => _pickImage(ImageSource.gallery),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _waterPlant() async {
     setState(() => _isWatering = true);
     try {
-      // Envia a ordem para o Firebase
       await _firestoreService.waterPlant(widget.plantId);
-      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('💧 Regaste a ${widget.plantName}!'),
-            backgroundColor: CERESColors.primaryDarkGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
+          SnackBar(content: Text('💧 Regaste a ${widget.plantName}!'), backgroundColor: CERESColors.primaryDarkGreen, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
         );
-        // Volta para a Home para ver a planta mudar de lista em tempo real!
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao regar planta.'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erro ao regar planta.'), backgroundColor: Colors.red));
         setState(() => _isWatering = false);
       }
     }
@@ -61,15 +120,11 @@ class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
     try {
       await _firestoreService.deletePlant(widget.plantId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Planta eliminada.'), backgroundColor: Colors.red),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Planta eliminada.'), backgroundColor: Colors.red));
         context.pop();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao eliminar planta.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erro ao eliminar planta.')));
     }
   }
 
@@ -83,21 +138,54 @@ class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
           children: [
             Stack(
               children: [
-                // Imagem Real da Planta
-                Container(
-                  height: 350,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: CERESColors.primaryDarkGreen.withValues(alpha: 0.08),
-                    borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
-                    child: Image.network(
-                      widget.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.park, size: 150, color: CERESColors.primaryDarkGreen)),
-                    ),
+                // CLIQUE LONGO PARA TROCAR A FOTO
+                GestureDetector(
+                  onLongPress: _showImageSourceDialog,
+                  child: Stack(
+                    children: [
+                      Container(
+                        height: 350,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: CERESColors.primaryDarkGreen.withValues(alpha: 0.08),
+                          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
+                          child: Image.network(
+                            _currentImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.park, size: 150, color: CERESColors.primaryDarkGreen)),
+                          ),
+                        ),
+                      ),
+                      
+                      // Indicador de Loading por cima da imagem durante o Upload
+                      if (_isUploadingImage)
+                        Container(
+                          height: 350,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
+                          ),
+                          child: const Center(child: CircularProgressIndicator(color: Colors.white)),
+                        ),
+
+                      // Botão visível para os utilizadores perceberem que podem trocar
+                      if (!_isUploadingImage)
+                        Positioned(
+                          bottom: 20,
+                          right: 20,
+                          child: Container(
+                            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8)]),
+                            child: IconButton(
+                              icon: const Icon(Icons.add_a_photo, color: CERESColors.primaryDarkGreen, size: 22),
+                              onPressed: _showImageSourceDialog,
+                            ),
+                          ),
+                        )
+                    ],
                   ),
                 ),
                 SafeArea(
@@ -107,10 +195,7 @@ class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
                       children: [
                         Container(
                           decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back, color: CERESColors.textMain),
-                            onPressed: () => context.pop(),
-                          ),
+                          child: IconButton(icon: const Icon(Icons.arrow_back, color: CERESColors.textMain), onPressed: () => context.pop()),
                         ),
                         const SizedBox(width: 12),
                         Container(
@@ -142,13 +227,9 @@ class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
                         color: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         onSelected: (value) {
-                          if (value == 'Eliminar') {
-                            _deletePlant();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ação selecionada: $value')));
-                          }
+                          if (value == 'Eliminar') _deletePlant();
                         },
-                        itemBuilder: (BuildContext context) => [
+                        itemBuilder: (context) => [
                           const PopupMenuItem(value: 'Editar', child: Text('Editar Planta')),
                           const PopupMenuItem(value: 'Pausar', child: Text('Pausar Regas')),
                           const PopupMenuDivider(),
@@ -182,7 +263,6 @@ class _PlantDetailsScreenState extends State<PlantDetailsScreen> {
                   const SizedBox(height: 32),
                   const Text('Sobre a planta', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                   const SizedBox(height: 16),
-                  // Em vez de dados fixos, usamos dados genéricos mas com aspeto limpo
                   _buildDetailRow('Tipo', 'Informação na API'),
                   const Divider(color: Color(0xFFEEEEEE), height: 30),
                   _buildDetailRow('Luz', 'Informação na API'),

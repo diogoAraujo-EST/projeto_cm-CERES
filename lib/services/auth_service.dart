@@ -1,14 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
+import 'firestore_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirestoreService _firestoreService = FirestoreService(); // Instância do FirestoreService
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // 1. Registo com Email/Password
   // 1. Registo com Email/Password e gravação do Nome
   Future<User?> registerWithEmailAndPassword(String email, String password, String name) async {
     try {
@@ -17,13 +17,17 @@ class AuthService {
         password: password,
       );
       
-      // Atualiza o perfil do utilizador com o nome introduzido
+      // Atualiza o auth profile
       await result.user?.updateDisplayName(name);
-      
-      // Força o Firebase a recarregar os dados atualizados
       await result.user?.reload();
       
-      return _auth.currentUser;
+      final updatedUser = _auth.currentUser;
+      if (updatedUser != null) {
+        // LIGAÇÃO AO FIRESTORE: Cria a pasta do utilizador!
+        await _firestoreService.createUserDocument(updatedUser, name: name);
+      }
+      
+      return updatedUser;
     } catch (e) {
       rethrow;
     }
@@ -42,11 +46,14 @@ class AuthService {
     }
   }
 
-  // 3. Entrar como Convidado (Autenticação Anónima do Firebase)
-  // Isto gera um utilizador temporário, o que permite que a regra do GoRouter funcione sem alterações!
+  // 3. Entrar como Convidado
   Future<User?> signInAnonymously() async {
     try {
       UserCredential result = await _auth.signInAnonymously();
+      if (result.user != null) {
+        // LIGAÇÃO AO FIRESTORE: Cria pasta para o convidado
+        await _firestoreService.createUserDocument(result.user!, name: 'Convidado');
+      }
       return result.user;
     } catch (e) {
       rethrow;
@@ -57,7 +64,7 @@ class AuthService {
   Future<User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null; // Utilizador cancelou o processo
+      if (googleUser == null) return null;
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
@@ -66,13 +73,18 @@ class AuthService {
       );
 
       UserCredential result = await _auth.signInWithCredential(credential);
+      
+      if (result.user != null) {
+        // LIGAÇÃO AO FIRESTORE: Cria/Atualiza pasta para user Google
+        await _firestoreService.createUserDocument(result.user!);
+      }
       return result.user;
     } catch (e) {
       rethrow;
     }
   }
 
-  // 5. Enviar email de recuperação de palavra-passe
+  // 5. Enviar email de recuperação
   Future<void> sendPasswordReset(String email) async {
    try {
      await _auth.sendPasswordResetEmail(email: email);
