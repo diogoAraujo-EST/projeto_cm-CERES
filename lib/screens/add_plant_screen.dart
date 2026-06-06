@@ -195,7 +195,8 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
     );
   }
 
-  Future<void> _savePlant() async {
+  // Substitui apenas esta parte dentro do ficheiro add_plant_screen.dart
+   Future<void> _savePlant() async {
     if (_selectedSpecies == null) {
       _showSnackBar('Por favor, selecione uma espécie de planta.', Colors.red);
       return;
@@ -217,20 +218,44 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         ? _nicknameController.text.trim() 
         : _selectedSpecies!.name;
 
+    // --- MOTOR DE INTELIGÊNCIA: AJUSTE DO INTERVALO DE REGA ---
+    int adjustedInterval = _selectedSpecies!.defaultWateringInterval;
+    String pLight = _selectedSpecies!.lightLevel.toLowerCase();
+    String rLight = _selectedRoom!.lightLevel.toLowerCase();
+
+    // Ajuste de Luz
+    if (rLight == 'pouca luz' && (pLight.contains('muita') || pLight.contains('direta'))) {
+      adjustedInterval += 2; // Fotossíntese lenta -> Consome menos água -> Mais dias
+    } else if (rLight == 'muita luz' && (pLight.contains('pouca') || pLight.contains('indireta'))) {
+      adjustedInterval -= 1; // Sol a mais -> Seca rápido -> Menos dias
+    }
+
+    // Ajuste de Exterior
+    if (_selectedRoom!.isExterior) {
+      adjustedInterval -= 1; // Vento e sol secam a terra -> Menos dias
+    }
+
+    // Garante que o intervalo nunca é menor que 1 dia para não dar erros
+    if (adjustedInterval < 1) {
+      adjustedInterval = 1;
+    }
+
     final newPlant = UserPlant(
       id: '', 
       userId: user.uid,
       nickname: finalNickname,
       speciesName: _selectedSpecies!.name,
       imageUrl: _selectedSpecies!.imageUrl,
-      wateringInterval: _selectedSpecies!.defaultWateringInterval,
+      wateringInterval: adjustedInterval, // <--- GUARDA LOGO O INTERVALO AJUSTADO!
       lastWatered: DateTime.now(),
       roomName: _selectedRoom!.name,
       wateringHistory: [DateTime.now()],
+      apiLight: _selectedSpecies!.lightLevel,
+      apiCare: _selectedSpecies!.careInstructions,
+      apiDescription: _selectedSpecies!.description,
     );
 
     try {
-      // Passamos também o ficheiro da imagem opcional
       await _firestoreService.addPlant(newPlant, imageFile: _selectedImage);
       if (mounted) {
         _showSnackBar('🌿 $finalNickname adicionada com sucesso!', CERESColors.primaryDarkGreen);

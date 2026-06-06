@@ -10,6 +10,11 @@ class UserPlant {
   final DateTime lastWatered;
   final String roomName;
   final List<DateTime> wateringHistory; 
+  
+  // NOVOS CAMPOS DA API
+  final String apiLight;
+  final String apiCare;
+  final String apiDescription;
 
   UserPlant({
     required this.id,
@@ -21,9 +26,11 @@ class UserPlant {
     required this.lastWatered,
     required this.roomName,
     required this.wateringHistory,
+    required this.apiLight,
+    required this.apiCare,
+    required this.apiDescription,
   });
 
-  // Converte para JSON para enviar para o Firebase
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
@@ -34,10 +41,12 @@ class UserPlant {
       'lastWatered': Timestamp.fromDate(lastWatered),
       'roomName': roomName,
       'wateringHistory': wateringHistory.map((d) => Timestamp.fromDate(d)).toList(),
+      'apiLight': apiLight,
+      'apiCare': apiCare,
+      'apiDescription': apiDescription,
     };
   }
 
-  // Converte do Firebase para o objeto da App
   factory UserPlant.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
     return UserPlant(
@@ -52,10 +61,14 @@ class UserPlant {
       wateringHistory: (data['wateringHistory'] as List<dynamic>?)
           ?.map((t) => (t as Timestamp).toDate())
           .toList() ?? [(data['lastWatered'] as Timestamp).toDate()],
+      
+      // Fallbacks para plantas antigas criadas antes desta alteração
+      apiLight: data['apiLight'] ?? 'Luz indireta',
+      apiCare: data['apiCare'] ?? 'Rega regular.',
+      apiDescription: data['apiDescription'] ?? 'Sem descrição disponível.',
     );
   }
 
-  // --- LÓGICA DE DATAS ---
   int get daysUntilNextWatering {
     final nextWatering = lastWatered.add(Duration(days: wateringInterval));
     final today = DateTime.now();

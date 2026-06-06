@@ -168,18 +168,8 @@ class HomeScreen extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Envia o ID da planta e os dados essenciais para o ecrã de detalhes
-        context.push(
-          '/plant-details', 
-          extra: {
-            'id': plant.id, // Fundamental para depois podermos regar na BD
-            'name': plant.nickname,
-            'status': plant.statusText,
-            'lastWatered': plant.lastWateredText,
-            'isUrgent': plant.isUrgent,
-            'imageUrl': plant.imageUrl, // Passamos a imagem real também
-          }
-        );
+        // Envia A PLANTA INTEIRA para os Detalhes
+        context.push('/plant-details', extra: plant);
       },
       child: Container(
         padding: const EdgeInsets.all(16),

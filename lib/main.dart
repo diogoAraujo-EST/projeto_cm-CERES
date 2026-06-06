@@ -18,6 +18,7 @@ import 'screens/settings_screen.dart';
 import 'screens/help_screen.dart';
 import 'constants/colors.dart';
 import 'services/notification_service.dart';
+import 'models/user_plant.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -90,18 +91,11 @@ final GoRouter _router = GoRouter(
     ),
 
 // detalhes de planta
-    GoRoute(
+   GoRoute(
       path: '/plant-details',
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
-        return PlantDetailsScreen(
-          plantId: extra['id'], // Recebe o ID real do Firestore
-          plantName: extra['name'],
-          plantStatus: extra['status'],
-          lastWatered: extra['lastWatered'],
-          isUrgent: extra['isUrgent'],
-          imageUrl: extra['imageUrl'], // Recebe a imagem real
-        );
+        final plant = state.extra as UserPlant; // Agora passa o objeto inteiro!
+        return PlantDetailsScreen(plant: plant);
       },
     ),
 

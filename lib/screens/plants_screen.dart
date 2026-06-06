@@ -68,15 +68,7 @@ class PlantsScreen extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Agora envia os dados todos corretos para os detalhes não rebentarem!
-        context.push('/plant-details', extra: {
-          'id': plant.id,
-          'name': plant.nickname,
-          'status': plant.statusText,
-          'lastWatered': plant.lastWateredText,
-          'isUrgent': plant.isUrgent,
-          'imageUrl': plant.imageUrl,
-        });
+        context.push('/plant-details', extra: plant);
       },
       child: Container(
         padding: const EdgeInsets.all(16),
