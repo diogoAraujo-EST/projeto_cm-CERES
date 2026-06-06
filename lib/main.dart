@@ -12,8 +12,6 @@ import 'screens/home_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/plant_details_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/add_plant_screen.dart' ;
 import 'screens/plants_screen.dart';
 import 'screens/settings_screen.dart';
@@ -102,14 +100,7 @@ final GoRouter _router = GoRouter(
       },
     ),
 
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
-    GoRoute(
-      path: '/register',
-      builder: (context, state) => const RegisterScreen(),
-    ),
+
     GoRoute(
       path: '/add-plant',
       builder: (context, state) => const AddPlantScreen(),

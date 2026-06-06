@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
+import '../models/plant_species.dart';
+import '../models/room.dart';
+import '../services/plant_api_service.dart';
+import 'dart:async';
 
 class AddPlantScreen extends StatefulWidget {
   const AddPlantScreen({super.key});
@@ -10,7 +14,179 @@ class AddPlantScreen extends StatefulWidget {
 }
 
 class _AddPlantScreenState extends State<AddPlantScreen> {
-  double _frequency = 3;
+  final _nicknameController = TextEditingController();
+  final _searchController = TextEditingController();
+  final _apiService = PlantApiService();
+  Timer? _debounce;
+
+  List<PlantSpecies> _speciesList = [];
+  bool _isLoadingSpecies = true;
+  PlantSpecies? _selectedSpecies;
+  Room? _selectedRoom;
+  
+  // Lista de divisões começa vazia, obrigando o utilizador a criar a sua primeira
+  final List<Room> _rooms = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Carrega a lista completa da sua API ao abrir o ecrã
+    _loadSpecies(''); 
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSpecies(String query) async {
+    setState(() => _isLoadingSpecies = true);
+    try {
+      final results = await _apiService.fetchSpecies(query: query);
+      setState(() {
+        _speciesList = results;
+        _isLoadingSpecies = false;
+      });
+    } catch (e) {
+      setState(() {
+        _speciesList = [];
+        _isLoadingSpecies = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      _loadSpecies(query.trim());
+    });
+  }
+
+  void _showCreateRoomSheet() {
+    final nameController = TextEditingController();
+    String selectedLight = 'Luz Média';
+    bool isExterior = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 24 + keyboardPadding),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Criar Nova Divisão 🏠', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                    const SizedBox(height: 20),
+
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Ex: Escritório, Varanda...',
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: CERESColors.primaryDarkGreen, width: 2)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text('Nível de Iluminação', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedLight,
+                      items: ['Muita Luz', 'Luz Média', 'Pouca Luz'].map((String val) {
+                        return DropdownMenuItem<String>(value: val, child: Text(val));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => selectedLight = val);
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    SwitchListTile(
+                      title: const Text('É um espaço exterior?', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                      activeColor: CERESColors.primaryDarkGreen,
+                      value: isExterior,
+                      onChanged: (val) => setModalState(() => isExterior = val),
+                    ),
+                    const SizedBox(height: 24),
+
+                    ElevatedButton(
+                      onPressed: () {
+                        final name = nameController.text.trim();
+                        if (name.isNotEmpty) {
+                          final newRoom = Room(name: name, lightLevel: selectedLight, isExterior: isExterior);
+                          setState(() {
+                            _rooms.add(newRoom);
+                            _selectedRoom = newRoom; 
+                          });
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CERESColors.primaryDarkGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Guardar Divisão', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _savePlant() {
+    if (_selectedSpecies == null) {
+      _showSnackBar('Por favor, selecione uma espécie de planta.', Colors.red);
+      return;
+    }
+    if (_selectedRoom == null) {
+      _showSnackBar('Por favor, selecione ou crie uma divisão para a planta.', Colors.red);
+      return;
+    }
+
+    final String finalNickname = _nicknameController.text.trim().isNotEmpty 
+        ? _nicknameController.text.trim() 
+        : _selectedSpecies!.name;
+
+    _showSnackBar('🌿 $finalNickname adicionada com sucesso à divisão ${_selectedRoom!.name}!', CERESColors.primaryDarkGreen);
+    context.pop();
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color, behavior: SnackBarBehavior.floating),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,31 +197,19 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         elevation: 0,
         title: const Text('Adicionar Planta', style: TextStyle(color: CERESColors.textMain, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: CERESColors.textMain),
-          onPressed: () => context.pop(),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: CERESColors.textMain), onPressed: () => context.pop()),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: CERESColors.primaryDarkGreen.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(child: Icon(Icons.park, size: 60, color: CERESColors.primaryDarkGreen)),
-            ),
-            const SizedBox(height: 32),
-            
-            const Text('Nome da Planta', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+            const Text('Nome da Planta (Opcional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
             const SizedBox(height: 8),
             TextField(
+              controller: _nicknameController,
               decoration: InputDecoration(
-                hintText: 'Ex: A minha Monstera',
+                hintText: 'Ex: A minha Monstera, Fred...',
                 filled: true,
                 fillColor: Colors.grey.shade50,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -55,51 +219,200 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             ),
             const SizedBox(height: 24),
 
-            const Text('Frequência de Rega', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+            const Text('Pesquisar Espécie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
             const SizedBox(height: 8),
-            Text(
-              'Regar a cada ${_frequency.toInt()} dias', 
-              style: const TextStyle(fontSize: 18, color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+            TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Escreva o nome da planta...',
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+              ),
             ),
-            Slider(
-              value: _frequency,
-              min: 1,
-              max: 15,
-              divisions: 14,
-              activeColor: CERESColors.primaryDarkGreen,
-              inactiveColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.2),
-              onChanged: (val) {
-                setState(() {
-                  _frequency = val;
-                });
-              },
+            const SizedBox(height: 12),
+
+            // Carrossel horizontal de espécies
+            SizedBox(
+              height: 140,
+              child: _isLoadingSpecies
+                  ? const Center(child: CircularProgressIndicator(color: CERESColors.primaryDarkGreen))
+                  : _speciesList.isEmpty
+                      ? const Center(child: Text('Nenhuma espécie encontrada.', textAlign: TextAlign.center))
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _speciesList.length,
+                          itemBuilder: (context, index) {
+                            final species = _speciesList[index];
+                            final isSelected = _selectedSpecies?.id == species.id;
+
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedSpecies = species);
+                              },
+                              child: Container(
+                                width: 110,
+                                margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? CERESColors.primaryDarkGreen.withValues(alpha: 0.08) : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: isSelected ? CERESColors.primaryDarkGreen : Colors.grey.shade200, width: 2),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+                                        child: Image.network(
+                                          species.imageUrl, 
+                                          fit: BoxFit.cover, 
+                                          width: double.infinity,
+                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.shade200, child: const Icon(Icons.park, color: Colors.grey)),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                      child: Text(
+                                        species.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: CERESColors.textMain),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
 
+            // Detalhes da espécie selecionada
+            if (_selectedSpecies != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.eco_rounded, color: CERESColors.primaryDarkGreen, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Sobre a ${_selectedSpecies!.name}', style: const TextStyle(fontWeight: FontWeight.bold, color: CERESColors.primaryDarkGreen, fontSize: 16)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    Text(_selectedSpecies!.description, style: const TextStyle(fontSize: 13, color: CERESColors.textSecondary, height: 1.4)),
+                    const SizedBox(height: 12),
+                    
+                    Row(
+                      children: [
+                        const Icon(Icons.water_drop_outlined, color: Colors.blue, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Rega: A cada ${_selectedSpecies!.defaultWateringInterval} dias', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Luz: ${_selectedSpecies!.lightLevel}', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: CERESColors.primaryDarkGreen.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.tips_and_updates_outlined, color: CERESColors.primaryDarkGreen, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text('Dica: ${_selectedSpecies!.careInstructions}', style: const TextStyle(fontSize: 13, color: CERESColors.primaryDarkGreen, fontStyle: FontStyle.italic)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Divisão da Casa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                TextButton.icon(
+                  onPressed: _showCreateRoomSheet,
+                  icon: const Icon(Icons.add, size: 16, color: CERESColors.primaryDarkGreen),
+                  label: const Text('Criar Divisão', style: TextStyle(color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            _rooms.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.amber.shade200),
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.home_work_outlined, color: Colors.amber.shade800),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Ainda não tens nenhuma divisão criada. Cria a tua primeira divisão acima!',
+                            style: TextStyle(color: CERESColors.textMain, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Wrap(
+                    spacing: 8.0,
+                    runSpacing: 4.0,
+                    children: _rooms.map((room) {
+                      final isSelected = _selectedRoom?.name == room.name;
+                      return ChoiceChip(
+                        label: Text(room.name),
+                        selected: isSelected,
+                        selectedColor: CERESColors.primaryDarkGreen,
+                        backgroundColor: Colors.grey.shade50,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : CERESColors.textMain,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (selected) {
+                          setState(() => _selectedRoom = selected ? room : null);
+                        },
+                      );
+                    }).toList(),
+                  ),
             const SizedBox(height: 40),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('🌿 Planta adicionada com sucesso!'),
-                                  backgroundColor: CERESColors.primaryDarkGreen,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                              );
-                  context.pop(); // Volta à home
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: CERESColors.primaryDarkGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
-                ),
-                child: const Text('Guardar Planta', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ElevatedButton(
+              onPressed: _savePlant,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CERESColors.primaryDarkGreen,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
+              child: const Text('Guardar Planta', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

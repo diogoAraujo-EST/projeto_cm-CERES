@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importação do Firebase Auth
 import '../constants/colors.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,23 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Obter o utilizador atual do Firebase
+    final user = FirebaseAuth.instance.currentUser;
+    
+    // Tratamento de nome dinâmico
+    String displayName = 'Utilizador';
+    if (user != null) {
+      if (user.isAnonymous) {
+        displayName = 'Convidado';
+      } else if (user.displayName != null && user.displayName!.isNotEmpty) {
+        displayName = user.displayName!;
+        // Limita a exibição a 20 caracteres para segurança visual
+        if (displayName.length > 20) {
+          displayName = displayName.substring(0, 20);
+        }
+      }
+    }
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(24.0),
@@ -19,25 +37,20 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('Olá, Mariana!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
-                      const SizedBox( width: 4,),
+                      Text('Olá, $displayName!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                      const SizedBox(width: 4),
                       Transform.translate(
                         offset: const Offset(0, -5),
                         child: Image.asset(
-                        'assets/images/ceres_logo_only_2.png',
-                        height: 30,
+                          'assets/images/ceres_logo_only_2.png',
+                          height: 30,
                         ),
                       )
                     ],
                   ),
-                  
                   const SizedBox(height: 4),
-                  Text('Aqui está o resumo das tuas plantas.', style: TextStyle(fontSize: 14, color: CERESColors.textSecondary)),
-                
-                
-                
+                  const Text('Aqui está o resumo das tuas plantas.', style: TextStyle(fontSize: 14, color: CERESColors.textSecondary)),
                 ],
-                
               ),
               Container(
                 decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade200)),
@@ -89,15 +102,15 @@ class HomeScreen extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Navega para os detalhes da planta, passando os dados necessários
         context.push(
           '/plant-details', 
-        extra: {
-          'name': title,
-          'status': status,
-          'lastWatered': subtitle,
-          'isUrgent': isUrgent,
-        });
+          extra: {
+            'name': title,
+            'status': status,
+            'lastWatered': subtitle,
+            'isUrgent': isUrgent,
+          }
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),

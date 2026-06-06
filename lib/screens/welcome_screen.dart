@@ -1,9 +1,39 @@
 import 'package:flutter/material.dart';
-import '../constants/colors.dart';
 import 'package:go_router/go_router.dart';
+import '../constants/colors.dart';
+import 'login_bottom_sheet.dart';     
+import 'register_bottom_sheet.dart';  
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+
+  void _showLoginSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => LoginBottomSheet(
+        onSwitchToRegister: () {
+          Navigator.pop(context); 
+          _showRegisterSheet(context); 
+        },
+      ),
+    );
+  }
+
+  void _showRegisterSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RegisterBottomSheet(
+        onSwitchToLogin: () {
+          Navigator.pop(context); 
+          _showLoginSheet(context); 
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +53,6 @@ class WelcomeScreen extends StatelessWidget {
               fit: BoxFit.contain, 
             ),
           ),
-
           Positioned(
             right: 24,
             top: screenHeight * 0.25,
@@ -33,12 +62,10 @@ class WelcomeScreen extends StatelessWidget {
               children: [
                 Image.asset(
                   'assets/images/ceres_logo_only_2.png',
-                   height: 80,
+                  height: 80,
                   width: 60,
                   fit: BoxFit.contain,
                 ),
-
-                
                 RichText(
                   text: const TextSpan(
                     style: TextStyle(
@@ -57,7 +84,6 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
                 const Text(
                   'A rega certa,\nna altura certa.',
                   style: TextStyle(
@@ -79,10 +105,7 @@ class WelcomeScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Navega para o ecrã principal (com a navBar)
-                        context.go('/register');
-                      },
+                      onPressed: () => _showRegisterSheet(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CERESColors.primaryDarkGreen,
                         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -93,15 +116,10 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Entrar
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
-                      onPressed: () {
-                        // Navega para o ecrã principal (com a navBar)
-                        context.go('/login');
-                      },
+                      onPressed: () => _showLoginSheet(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         side: BorderSide(color: Colors.grey.shade300, width: 1.5), 
@@ -118,5 +136,4 @@ class WelcomeScreen extends StatelessWidget {
       ),
     );
   }
-
 }

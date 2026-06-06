@@ -1,17 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importação do Firebase Auth
 import 'package:go_router/go_router.dart';
-import 'package:projeto_cm/services/auth_service.dart';
-//import 'package:projeto_cm/screens/welcome_screen.dart';
 import '../constants/colors.dart';
-
-final _authService = AuthService();
+import '../services/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
-  
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final authService = AuthService();
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Tratamento dinâmico para nome e email
+    String displayName = 'Utilizador';
+    String displayEmail = 'Sem e-mail registado';
+    String avatarLetter = 'U';
+
+    if (user != null) {
+      if (user.isAnonymous) {
+        displayName = 'Convidado';
+        displayEmail = 'Acesso temporário';
+        avatarLetter = 'C';
+      } else {
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          displayName = user.displayName!;
+          // Limita para segurança visual no perfil
+          if (displayName.length > 20) {
+            displayName = displayName.substring(0, 20);
+          }
+          avatarLetter = displayName[0].toUpperCase();
+        }
+        if (user.email != null && user.email!.isNotEmpty) {
+          displayEmail = user.email!;
+        }
+      }
+    }
+
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(24.0),
@@ -19,19 +44,21 @@ class ProfileScreen extends StatelessWidget {
           const Text('Perfil', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
           const SizedBox(height: 32),
           
-          
-          // Avatar e Nome
+          // Avatar e Dados Dinâmicos
           Center(
             child: Column(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 50,
                   backgroundColor: CERESColors.primaryDarkGreen,
-                  child: Text('M', style: TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: user != null && user.isAnonymous
+                      ? const Icon(Icons.person_outline, size: 48, color: Colors.white) // Ícone para convidado
+                      : Text(avatarLetter, style: const TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 16),
-                const Text('Mariana', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
-                Text('mariana@plantteste.com', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                Text(displayName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
+                const SizedBox(height: 4),
+                Text(displayEmail, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
               ],
             ),
           ),
@@ -39,24 +66,24 @@ class ProfileScreen extends StatelessWidget {
 
           // Menu de Opções
           _buildMenuTile(Icons.eco, 'As minhas plantas', () {
-            context.go('/plants'); // Magia do GoRouter: salta para o separador das plantas!
+            context.go('/plants'); 
           }),
           _buildMenuTile(Icons.settings, 'Configurações', () {
-            context.push('/settings'); // Abre por cima
+            context.push('/settings'); 
           }),
           _buildMenuTile(Icons.help_outline, 'Ajuda e Suporte', () {
-            context.push('/help'); // Abre por cima
+            context.push('/help'); 
           }),
           
           const Divider(height: 40),
           
           _buildMenuTile(Icons.logout, 'Sair da Conta', () async {
-            await _authService.signOut();
+            await authService.signOut();
             if (context.mounted) {
-               context.go('/'); // Redireciona para o ecrã de boas-vindas
+              context.go('/');
             }
-            }, isDestructive: true),
-         ],
+          }, isDestructive: true),
+        ],
       ),
     );
   }
