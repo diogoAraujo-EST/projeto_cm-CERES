@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
+import '../services/firestore_service.dart';
+import '../models/user_plant.dart';
 
 class PlantsScreen extends StatelessWidget {
   const PlantsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final firestoreService = FirestoreService();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -18,40 +22,60 @@ class PlantsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search, color: CERESColors.textMain),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Barra de pesquisa a ser implementada...')),
-              );
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Barra de pesquisa a ser implementada...')));
             },
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: [
-          _buildPlantItem(context, 'Monstera', 'Interior • Luz indireta'),
-          const SizedBox(height: 16),
-          _buildPlantItem(context, 'Ficus Lyrata', 'Interior • Luz brilhante'),
-          const SizedBox(height: 16),
-          _buildPlantItem(context, 'Samambaia', 'Interior • Sombra parcial'),
-          const SizedBox(height: 16),
-          _buildPlantItem(context, 'Suculenta', 'Exterior • Luz direta'),
-          
-          const SizedBox(height: 80), // Espaço para não bater no botão flutuante da navbar
-        ],
+      // Substituímos a lista fixa pelo StreamBuilder da Firebase
+      body: StreamBuilder<List<UserPlant>>(
+        stream: firestoreService.getUserPlants(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: CERESColors.primaryDarkGreen));
+          }
+
+          if (snapshot.hasError) {
+            return const Center(child: Text('Erro ao carregar as plantas.', style: TextStyle(color: Colors.red)));
+          }
+
+          final plants = snapshot.data ?? [];
+
+          if (plants.isEmpty) {
+            return const Center(
+              child: Text('Ainda não tens plantas guardadas.', style: TextStyle(color: CERESColors.textSecondary, fontSize: 16)),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(24.0),
+            itemCount: plants.length,
+            itemBuilder: (context, index) {
+              final plant = plants[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildPlantItem(context, plant),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _buildPlantItem(BuildContext context, String name, String details) {
+  // O cartão atualizado para receber e passar dados reais do Firebase
+  Widget _buildPlantItem(BuildContext context, UserPlant plant) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
-        // Aproveitamos a rota que já criaste para abrir os detalhes!
+        // Agora envia os dados todos corretos para os detalhes não rebentarem!
         context.push('/plant-details', extra: {
-          'name': name,
-          'status': 'Sem rega urgente',
-          'lastWatered': 'Última rega: Há 2 dias',
-          'isUrgent': false,
+          'id': plant.id,
+          'name': plant.nickname,
+          'status': plant.statusText,
+          'lastWatered': plant.lastWateredText,
+          'isUrgent': plant.isUrgent,
+          'imageUrl': plant.imageUrl,
         });
       },
       child: Container(
@@ -66,16 +90,24 @@ class PlantsScreen extends StatelessWidget {
             Container(
               width: 60, height: 60,
               decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.park, color: CERESColors.primaryDarkGreen),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  plant.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.park, color: CERESColors.primaryDarkGreen),
+                ),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: CERESColors.textMain)),
+                  Text(plant.nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: CERESColors.textMain)),
                   const SizedBox(height: 4),
-                  Text(details, style: const TextStyle(fontSize: 13, color: CERESColors.textSecondary)),
+                  // Mostra a divisão da casa como detalhe
+                  Text('${plant.roomName} • ${plant.speciesName}', style: const TextStyle(fontSize: 13, color: CERESColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),

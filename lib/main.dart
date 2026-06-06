@@ -17,21 +17,25 @@ import 'screens/plants_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/help_screen.dart';
 import 'constants/colors.dart';
+import 'services/notification_service.dart';
 
 void main() async {
-  // Garante que os bindings do Flutter estão prontos antes de iniciar o Firebase
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Inicializa o Firebase com as configurações nativas (google-services.json)
     await Firebase.initializeApp();
     print("Firebase inicializado com sucesso!");
+    
+    // Inicializa o serviço de notificações!
+    await NotificationService().init();
+    
   } catch (e) {
-    print("Erro ao inicializar o Firebase: $e");
+    print("Erro na inicialização: $e");
   }
 
   runApp(const MyApp());
 }
+
 final GoRouter _router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) {
@@ -85,17 +89,18 @@ final GoRouter _router = GoRouter(
       ],
     ),
 
-    // detalhes de planta - como ocupa o ecrã todo, fica fora do navBar
+// detalhes de planta
     GoRoute(
       path: '/plant-details',
       builder: (context, state) {
-        // recebe os dados da planta 
         final extra = state.extra as Map<String, dynamic>;
         return PlantDetailsScreen(
+          plantId: extra['id'], // Recebe o ID real do Firestore
           plantName: extra['name'],
           plantStatus: extra['status'],
           lastWatered: extra['lastWatered'],
           isUrgent: extra['isUrgent'],
+          imageUrl: extra['imageUrl'], // Recebe a imagem real
         );
       },
     ),
