@@ -34,9 +34,15 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 40),
 
           // Menu de Opções
-          _buildMenuTile(Icons.eco, 'As minhas plantas', () {}),
-          _buildMenuTile(Icons.settings, 'Configurações', () {}),
-          _buildMenuTile(Icons.help_outline, 'Ajuda e Suporte', () {}),
+          _buildMenuTile(Icons.eco, 'As minhas plantas', () {
+            context.go('/plants'); // Magia do GoRouter: salta para o separador das plantas!
+          }),
+          _buildMenuTile(Icons.settings, 'Configurações', () {
+            context.push('/settings'); // Abre por cima
+          }),
+          _buildMenuTile(Icons.help_outline, 'Ajuda e Suporte', () {
+            context.push('/help'); // Abre por cima
+          }),
           
           const Divider(height: 40),
           

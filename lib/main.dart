@@ -10,6 +10,12 @@ import 'screens/home_screen.dart';
 import 'screens/statistics_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/plant_details_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/add_plant_screen.dart' ;
+import 'screens/plants_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/help_screen.dart';
 import 'constants/colors.dart';
 
 void main() {
@@ -36,7 +42,7 @@ final GoRouter _router = GoRouter(
         ),
         // Separador 1: Plantas POR FAZER - AINDA NÃO TEMOS O ECRÃ PRONTO, POR ISSO VAMOS USAR UM PLACEHOLDER
         StatefulShellBranch(
-          routes: [GoRoute(path: '/plants', builder: (context, state) => const Center(child: Text("Página das Plantas")))],
+          routes: [GoRoute(path: '/plants', builder: (context, state) => const PlantsScreen())],
         ),
         // Separador 2: Calendaario
         StatefulShellBranch(
@@ -66,6 +72,27 @@ final GoRouter _router = GoRouter(
           isUrgent: extra['isUrgent'],
         );
       },
+    ),
+
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/add-plant',
+      builder: (context, state) => const AddPlantScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/help',
+      builder: (context, state) => const HelpScreen(),
     ),
   ],
 );

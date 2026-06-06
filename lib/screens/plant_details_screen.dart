@@ -91,7 +91,22 @@ class PlantDetailsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(plantName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
-                      const Icon(Icons.more_vert, color: CERESColors.textSecondary),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, color: CERESColors.textSecondary),
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        onSelected: (value) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Ação selecionada: $value')),
+                          );
+                        },
+                        itemBuilder: (BuildContext context) => [
+                          const PopupMenuItem(value: 'Editar', child: Text('Editar Planta')),
+                          const PopupMenuItem(value: 'Pausar', child: Text('Pausar Regas')),
+                          const PopupMenuDivider(),
+                          const PopupMenuItem(value: 'Eliminar', child: Text('Eliminar Planta', style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),

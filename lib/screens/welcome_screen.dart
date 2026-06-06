@@ -81,7 +81,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         // Navega para o ecrã principal (com a navBar)
-                        context.go('/home');
+                        context.go('/register');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: CERESColors.primaryDarkGreen,
@@ -100,7 +100,7 @@ class WelcomeScreen extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () {
                         // Navega para o ecrã principal (com a navBar)
-                        context.go('/home');
+                        context.go('/login');
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 18),

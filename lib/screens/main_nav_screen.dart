@@ -17,9 +17,7 @@ class MainNavScreen extends StatelessWidget {
       floatingActionButton: navigationShell.currentIndex == 0 
         ? FloatingActionButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Nova Planta!!!')),
-              );
+              context.push('/add-plant');
             },
             backgroundColor: CERESColors.primaryDarkGreen,
             shape: const CircleBorder(),
