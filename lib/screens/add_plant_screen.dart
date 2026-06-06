@@ -19,21 +19,24 @@ class AddPlantScreen extends StatefulWidget {
 class _AddPlantScreenState extends State<AddPlantScreen> {
   final _nicknameController = TextEditingController();
   final _searchController = TextEditingController();
+  
+  // Serviços
   final _apiService = PlantApiService();
   final _firestoreService = FirestoreService();
+  
   Timer? _debounce;
 
   List<PlantSpecies> _speciesList = [];
   bool _isLoadingSpecies = true;
-  bool _isSaving = false;
+  bool _isSaving = false; // Controlo de loading ao guardar na base de dados
   
   PlantSpecies? _selectedSpecies;
   Room? _selectedRoom;
-  double _frequency = 3;
 
   @override
   void initState() {
     super.initState();
+    // Carrega a lista completa da API ao abrir o ecrã
     _loadSpecies(''); 
   }
 
@@ -93,10 +96,13 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+                    Center(
+                      child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                    ),
                     const SizedBox(height: 20),
                     const Text('Criar Nova Divisão 🏠', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                     const SizedBox(height: 20),
+
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
@@ -108,15 +114,25 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
                     const Text('Nível de Iluminação', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: selectedLight,
-                      items: ['Muita Luz', 'Luz Média', 'Pouca Luz'].map((String val) => DropdownMenuItem<String>(value: val, child: Text(val))).toList(),
-                      onChanged: (val) { if (val != null) setModalState(() => selectedLight = val); },
-                      decoration: InputDecoration(filled: true, fillColor: Colors.grey.shade50, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      items: ['Muita Luz', 'Luz Média', 'Pouca Luz'].map((String val) {
+                        return DropdownMenuItem<String>(value: val, child: Text(val));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => selectedLight = val);
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                     const SizedBox(height: 16),
+
                     SwitchListTile(
                       title: const Text('É um espaço exterior?', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                       activeColor: CERESColors.primaryDarkGreen,
@@ -124,18 +140,23 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       onChanged: (val) => setModalState(() => isExterior = val),
                     ),
                     const SizedBox(height: 24),
+
                     ElevatedButton(
                       onPressed: () async {
                         final name = nameController.text.trim();
                         if (name.isNotEmpty) {
-                          // GRAVA DIRETAMENTE NO FIREBASE
+                          // LIGAÇÃO AO FIREBASE: Guarda a divisão na cloud!
                           await _firestoreService.addRoom(name, selectedLight, isExterior);
                           if (context.mounted) {
                             Navigator.pop(context);
                           }
                         }
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: CERESColors.primaryDarkGreen, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: CERESColors.primaryDarkGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       child: const Text('Guardar Divisão', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ],
@@ -154,7 +175,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
       return;
     }
     if (_selectedRoom == null) {
-      _showSnackBar('Por favor, selecione ou crie uma divisão.', Colors.red);
+      _showSnackBar('Por favor, selecione ou crie uma divisão para a planta.', Colors.red);
       return;
     }
 
@@ -170,22 +191,23 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         ? _nicknameController.text.trim() 
         : _selectedSpecies!.name;
 
+    // LIGAÇÃO AO FIREBASE: Constrói a planta com os dados da API do teu colega
     final newPlant = UserPlant(
-      id: '', 
+      id: '', // Firebase gera automaticamente
       userId: user.uid,
       nickname: finalNickname,
       speciesName: _selectedSpecies!.name,
       imageUrl: _selectedSpecies!.imageUrl,
-      wateringInterval: _frequency.toInt(),
+      wateringInterval: _selectedSpecies!.defaultWateringInterval,
       lastWatered: DateTime.now(),
       roomName: _selectedRoom!.name,
-      wateringHistory: [DateTime.now()],
+      wateringHistory: [DateTime.now()], // Registo inicial para as Estatísticas funcionarem!
     );
 
     try {
       await _firestoreService.addPlant(newPlant);
       if (mounted) {
-        _showSnackBar('🌿 $finalNickname adicionada com sucesso!', CERESColors.primaryDarkGreen);
+        _showSnackBar('🌿 $finalNickname adicionada com sucesso à divisão ${_selectedRoom!.name}!', CERESColors.primaryDarkGreen);
         context.pop();
       }
     } catch (e) {
@@ -247,6 +269,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             ),
             const SizedBox(height: 12),
 
+            // Carrossel horizontal de espécies (UI do teu colega mantida!)
             SizedBox(
               height: 140,
               child: _isLoadingSpecies
@@ -262,10 +285,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
 
                             return GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  _selectedSpecies = species;
-                                  _frequency = species.defaultWateringInterval.toDouble();
-                                });
+                                setState(() => _selectedSpecies = species);
                               },
                               child: Container(
                                 width: 110,
@@ -305,6 +325,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                         ),
             ),
 
+            // Detalhes da espécie selecionada (UI do teu colega mantida!)
             if (_selectedSpecies != null) ...[
               const SizedBox(height: 16),
               Container(
@@ -321,39 +342,48 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    
                     Text(_selectedSpecies!.description, style: const TextStyle(fontSize: 13, color: CERESColors.textSecondary, height: 1.4)),
                     const SizedBox(height: 12),
+                    
                     Row(
                       children: [
                         const Icon(Icons.water_drop_outlined, color: Colors.blue, size: 18),
                         const SizedBox(width: 8),
-                        Text('Rega padrão: A cada ${_selectedSpecies!.defaultWateringInterval} dias', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
+                        Text('Rega: A cada ${_selectedSpecies!.defaultWateringInterval} dias', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined, color: Colors.orange, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Luz: ${_selectedSpecies!.lightLevel}', style: const TextStyle(fontSize: 13, color: CERESColors.textMain, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: CERESColors.primaryDarkGreen.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.tips_and_updates_outlined, color: CERESColors.primaryDarkGreen, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text('Dica: ${_selectedSpecies!.careInstructions}', style: const TextStyle(fontSize: 13, color: CERESColors.primaryDarkGreen, fontStyle: FontStyle.italic)),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              const Text('Frequência de Rega Personalizada', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
-              const SizedBox(height: 8),
-              Text(
-                'Regar a cada ${_frequency.toInt()} dias', 
-                style: const TextStyle(fontSize: 18, color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              Slider(
-                value: _frequency,
-                min: 1,
-                max: 15,
-                divisions: 14,
-                activeColor: CERESColors.primaryDarkGreen,
-                inactiveColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.2),
-                onChanged: (val) => setState(() => _frequency = val),
-              ),
             ],
-            
             const SizedBox(height: 24),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -367,7 +397,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
             ),
             const SizedBox(height: 8),
 
-            // A MÁGICA ACONTECE AQUI: StreamBuilder para as Divisões
+            // LIGAÇÃO AO FIREBASE: StreamBuilder para ler as divisões em tempo real!
             StreamBuilder<List<Room>>(
               stream: _firestoreService.getUserRooms(),
               builder: (context, snapshot) {
@@ -380,12 +410,21 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                 if (rooms.isEmpty) {
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.amber.shade200), color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.amber.shade200),
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.home_work_outlined, color: Colors.amber.shade800),
                         const SizedBox(width: 12),
-                        const Expanded(child: Text('Cria a tua primeira divisão acima!', style: TextStyle(color: CERESColors.textMain, fontSize: 13, fontWeight: FontWeight.w500))),
+                        const Expanded(
+                          child: Text(
+                            'Ainda não tens nenhuma divisão criada. Cria a tua primeira divisão acima!',
+                            style: TextStyle(color: CERESColors.textMain, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -401,14 +440,19 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                       selected: isSelected,
                       selectedColor: CERESColors.primaryDarkGreen,
                       backgroundColor: Colors.grey.shade50,
-                      labelStyle: TextStyle(color: isSelected ? Colors.white : CERESColors.textMain, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
-                      onSelected: (selected) => setState(() => _selectedRoom = selected ? room : null),
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : CERESColors.textMain,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: (selected) {
+                        setState(() => _selectedRoom = selected ? room : null);
+                      },
                     );
                   }).toList(),
                 );
               },
             ),
-            
+
             const SizedBox(height: 40),
 
             ElevatedButton(
@@ -418,7 +462,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: _isSaving 
+              child: _isSaving
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const Text('Guardar Planta', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
