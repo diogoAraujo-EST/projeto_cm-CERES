@@ -52,23 +52,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             }
           ),
-          SwitchListTile(
-            title: const Text('Modo Escuro (Dark Mode)'), 
-            activeColor: CERESColors.primaryDarkGreen, 
-            value: _darkMode, 
-            onChanged: (val) {
-              setState(() => _darkMode = val);
-              if (val) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tema escuro será aplicado na versão final.')));
-              }
-            }
-          ),
           const Divider(height: 40),
           ListTile(
             title: const Text('Editar Perfil'), 
             trailing: const Icon(Icons.chevron_right), 
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abrir formulário de edição...')));
+              context.push('/edit-profile');
             }
           ),
         ],

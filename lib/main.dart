@@ -16,6 +16,8 @@ import 'screens/add_plant_screen.dart' ;
 import 'screens/plants_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/help_screen.dart';
+import 'screens/edit_profile_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'constants/colors.dart';
 import 'services/notification_service.dart';
 import 'models/user_plant.dart';
@@ -112,6 +114,14 @@ final GoRouter _router = GoRouter(
       path: '/help',
       builder: (context, state) => const HelpScreen(),
     ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
   ],
 );
 
@@ -126,6 +136,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         primaryColor: CERESColors.primaryDarkGreen,
+          colorScheme: ColorScheme.fromSeed(
+          seedColor: CERESColors.primaryDarkGreen,
+          primary: CERESColors.primaryDarkGreen,
+        ),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: CERESColors.primaryDarkGreen,
+          selectionColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.3), // Fundo da seleção (verde clarinho)
+          selectionHandleColor: CERESColors.primaryDarkGreen, // As "gotas" de arrastar
+        ),
+
       ),
       routerConfig: _router, 
     );

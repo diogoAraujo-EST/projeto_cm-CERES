@@ -4,7 +4,7 @@ import '../models/plant_species.dart';
 
 class PlantApiService {
   
-  final String _apiUrl = 'https://gist.githubusercontent.com/GoncaloFR-Edu/97c1d869061ce56ca25ce6d8f33cae5d/raw/23ebe0144e442ccea8acc97a2e7620eedf65b2f1/plantas_api.json';
+  final String _apiUrl = 'https://gist.githubusercontent.com/GoncaloFR-Edu/97c1d869061ce56ca25ce6d8f33cae5d/raw/46fc3c175d2db1d4867d397f9f1f65a73bbdd3f6/plantas_api.json';
 
   Future<List<PlantSpecies>> fetchSpecies({String query = ''}) async {
     try {
