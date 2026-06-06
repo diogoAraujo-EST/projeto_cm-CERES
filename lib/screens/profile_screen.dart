@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:projeto_cm/services/auth_service.dart';
 //import 'package:projeto_cm/screens/welcome_screen.dart';
 import '../constants/colors.dart';
 
+final _authService = AuthService();
 
 class ProfileScreen extends StatelessWidget {
+  
   const ProfileScreen({super.key});
 
   @override
@@ -15,6 +18,7 @@ class ProfileScreen extends StatelessWidget {
         children: [
           const Text('Perfil', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: CERESColors.textMain)),
           const SizedBox(height: 32),
+          
           
           // Avatar e Nome
           Center(
@@ -46,9 +50,11 @@ class ProfileScreen extends StatelessWidget {
           
           const Divider(height: 40),
           
-          _buildMenuTile(Icons.logout, 'Sair da Conta', () {
-              // volta para o inicio
-            context.go('/');
+          _buildMenuTile(Icons.logout, 'Sair da Conta', () async {
+            await _authService.signOut();
+            if (context.mounted) {
+               context.go('/'); // Redireciona para o ecrã de boas-vindas
+            }
             }, isDestructive: true),
          ],
       ),

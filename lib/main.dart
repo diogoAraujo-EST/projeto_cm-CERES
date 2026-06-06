@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
 
@@ -18,12 +20,38 @@ import 'screens/settings_screen.dart';
 import 'screens/help_screen.dart';
 import 'constants/colors.dart';
 
-void main() {
+void main() async {
+  // Garante que os bindings do Flutter estão prontos antes de iniciar o Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // Inicializa o Firebase com as configurações nativas (google-services.json)
+    await Firebase.initializeApp();
+    print("Firebase inicializado com sucesso!");
+  } catch (e) {
+    print("Erro ao inicializar o Firebase: $e");
+  }
+
   runApp(const MyApp());
 }
-
 final GoRouter _router = GoRouter(
-  initialLocation: '/', // Começa no ecrã de Boas-vindas
+  initialLocation: '/',
+  redirect: (context, state) {
+    final user = FirebaseAuth.instance.currentUser;
+    final loggingIn = state.matchedLocation == '/login' || 
+                      state.matchedLocation == '/register' || 
+                      state.matchedLocation == '/';
+
+    // Se não estiver logado e tentar aceder a um ecrã privado, vai para o Welcome
+    if (user == null && !loggingIn) {
+      return '/';
+    }
+    // Se estiver logado e tentar ir ao Welcome/Login/Register, vai para a Home
+    if (user != null && loggingIn) {
+      return '/home';
+    }
+    return null;
+  },
   routes: [
     // 1. Boas-Vindas
     GoRoute(
