@@ -15,7 +15,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   // Variáveis que controlam os "switches" (botões de alternar)
   bool _notifications = false; // Começa desligado até o utilizador darmos permissão
-  bool _darkMode = false; // (Ainda não implementado, mas já tem a variável pronta para o futuro!)
   
   // Instância do nosso serviço que fala com o sistema de notificações do telemóvel
   final NotificationService _notificationService = NotificationService();
