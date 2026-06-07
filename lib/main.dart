@@ -3,8 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 
-
-// ecrãs da aplicaçãp
+// ecrãs da aplicação
 import 'screens/calendar_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_nav_screen.dart';
@@ -23,49 +22,68 @@ import 'services/notification_service.dart';
 import 'models/user_plant.dart';
 
 void main() async {
+  // Isto é super importante! Como vamos falar com "o exterior" (Firebase e o sistema 
+  // do telemóvel para as notificações) ANTES de a app desenhar o primeiro ecrã, 
+  // temos de avisar o Flutter para ele preparar as ligações ao sistema operativo.
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
+    // Acorda o Firebase
     await Firebase.initializeApp();
     print("Firebase inicializado com sucesso!");
     
-    // Inicializa o serviço de notificações!
+    // Inicializa o serviço de notificações (Pede permissões e prepara a app para receber alertas)
     await NotificationService().init();
     
   } catch (e) {
     print("Erro na inicialização: $e");
   }
 
+  // Arranca o barco!
   runApp(const MyApp());
 }
 
+// --- O NOSSO MAPA DE NAVEGAÇÃO (GoRouter) ---
 final GoRouter _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/', // A app começa sempre por tentar abrir a raiz (WelcomeScreen)
+  
+  // O "Segurança à Porta" da app. Ele analisa TODAS as mudanças de ecrã antes de elas acontecerem.
   redirect: (context, state) {
     final user = FirebaseAuth.instance.currentUser;
+    // Verifica se o destino do utilizador é um daqueles ecrãs públicos que não precisam de conta
     final loggingIn = state.matchedLocation == '/login' || 
                       state.matchedLocation == '/register' || 
                       state.matchedLocation == '/';
 
-    // Se não estiver logado e tentar aceder a um ecrã privado, vai para o Welcome
+    // Se a pessoa NÃO tem o login feito e está a tentar forçar a entrada noutro ecrã (ex: /home)...
+    // O segurança manda-a de volta para a rua (WelcomeScreen).
     if (user == null && !loggingIn) {
       return '/';
     }
-    // Se estiver logado e tentar ir ao Welcome/Login/Register, vai para a Home
+    
+    // Por outro lado, se ela JÁ tem conta e abre a app, não queremos chateá-la com o ecrã de 
+    // Boas-Vindas outra vez. O segurança manda-a diretamente para dentro (Home).
     if (user != null && loggingIn) {
       return '/home';
     }
+    
+    // Se estiver tudo bem, retorna null (significa "Podes prosseguir viagem, está tudo ok").
     return null;
   },
+  
   routes: [
-    // 1. Boas-Vindas
+    // 1. Ecrã de Boas-Vindas (A rua)
     GoRoute(
       path: '/',
       builder: (context, state) => const WelcomeScreen(),
     ),
 
+    // --- A MAGIA DA BARRA INFERIOR ---
+    // O StatefulShellRoute é o que permite ter uma barra de navegação sempre presente no fundo do ecrã,
+    // e o "Stateful" significa que cada tab (Separador) tem memória e não faz refresh quando voltamos a ele.
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
+        // Envolve as tabs todas na nossa "moldura" principal
         return MainNavScreen(navigationShell: navigationShell);
       },
       branches: [
@@ -73,15 +91,15 @@ final GoRouter _router = GoRouter(
         StatefulShellBranch(
           routes: [GoRoute(path: '/home', builder: (context, state) => const HomeScreen())],
         ),
-        // Separador 1: Plantas POR FAZER - AINDA NÃO TEMOS O ECRÃ PRONTO, POR ISSO VAMOS USAR UM PLACEHOLDER
+        // Separador 1: Plantas 
         StatefulShellBranch(
           routes: [GoRoute(path: '/plants', builder: (context, state) => const PlantsScreen())],
         ),
-        // Separador 2: Calendaario
+        // Separador 2: Calendário
         StatefulShellBranch(
           routes: [GoRoute(path: '/calendar', builder: (context, state) => const CalendarScreen())],
         ),
-        // Separador 3: Estatísticas POR FAZER - ECRÃ EXISTE, MAS NÃO TEM "FUNCIONALIZADES"
+        // Separador 3: Estatísticas
         StatefulShellBranch(
           routes: [GoRoute(path: '/statistics', builder: (context, state) => const StatisticsScreen())],
         ),
@@ -92,15 +110,17 @@ final GoRouter _router = GoRouter(
       ],
     ),
 
-// detalhes de planta
-   GoRoute(
+    // --- ROTAS SECUNDÁRIAS (Abrem "por cima" da barra de navegação) ---
+    // Detalhes da planta
+    GoRoute(
       path: '/plant-details',
       builder: (context, state) {
-        final plant = state.extra as UserPlant; // Agora passa o objeto inteiro!
+        // Truque de performance incrível: A página anterior envia a planta inteira na "mochila" (extra).
+        // Assim, o ecrã de detalhes já tem a foto, nome, etc., e não gasta dados móveis a ir buscar ao Firebase outra vez.
+        final plant = state.extra as UserPlant; 
         return PlantDetailsScreen(plant: plant);
       },
     ),
-
 
     GoRoute(
       path: '/add-plant',
@@ -125,14 +145,20 @@ final GoRouter _router = GoRouter(
   ],
 );
 
+// O Widget Base
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Usamos MaterialApp.router porque estamos a usar o sistema de rotas avançado do GoRouter
     return MaterialApp.router( 
       title: 'CERES',
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: false, // Tira aquela fita vermelha chata de "DEBUG" no canto do ecrã
+      
+      // O TEMA GLOBAL DA APP
+      // Ao configurarmos isto aqui, não precisamos de pintar os cursores e as caixas de texto 
+      // de verde uma a uma ao longo da app inteira. O Flutter faz isso por nós!
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         primaryColor: CERESColors.primaryDarkGreen,
@@ -141,13 +167,13 @@ class MyApp extends StatelessWidget {
           primary: CERESColors.primaryDarkGreen,
         ),
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: CERESColors.primaryDarkGreen,
-          selectionColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.3), // Fundo da seleção (verde clarinho)
-          selectionHandleColor: CERESColors.primaryDarkGreen, // As "gotas" de arrastar
+          cursorColor: CERESColors.primaryDarkGreen, // O tracinho a piscar quando escrevemos
+          selectionColor: CERESColors.primaryDarkGreen.withValues(alpha: 0.3), // Fundo da seleção (verde clarinho) quando sublinhamos texto
+          selectionHandleColor: CERESColors.primaryDarkGreen, // As "gotas" de arrastar para selecionar texto
         ),
-
       ),
-      routerConfig: _router, 
+      
+      routerConfig: _router, // Liga a app ao nosso mapa de rotas lá de cima
     );
   }
 }

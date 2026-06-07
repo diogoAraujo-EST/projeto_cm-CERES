@@ -4,7 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
 
+// O menu de registo também é um BottomSheet (aquela aba que sobe) 
+// para manter a consistência com a experiência de Login.
 class RegisterBottomSheet extends StatefulWidget {
+  // Função enviada pela página principal (WelcomeScreen) para sabermos como 
+  // saltar daqui para a aba de Login, caso a pessoa clique em "Já tens conta?".
   final VoidCallback onSwitchToLogin;
 
   const RegisterBottomSheet({super.key, required this.onSwitchToLogin});
@@ -14,27 +18,34 @@ class RegisterBottomSheet extends StatefulWidget {
 }
 
 class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
+  // Controlos visuais
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  // Ao contrário do login, aqui temos 3 campos: precisamos do nome também!
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  
   final _authService = AuthService();
 
+  // Guardar os erros individuais para pintar apenas as caixas que estiverem mal
   String? _nameError;
   String? _emailError;
   String? _passwordError;
 
   @override
   void dispose() {
+    // A clássica limpeza de primavera
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  // --- LÓGICA DE REGISTO ---
   Future<void> _register() async {
+    // 1. Apagar erros do ecrã antes de testar
     setState(() {
       _nameError = null;
       _emailError = null;
@@ -47,10 +58,12 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
 
     bool hasError = false;
 
+    // 2. VALIDAÇÕES LOCAIS (Para não gastar internet a perguntar ao Firebase se o nome pode estar vazio)
     if (name.isEmpty) {
       setState(() => _nameError = 'Por favor, introduza o seu nome');
       hasError = true;
     } else if (name.length > 20) {
+      // Bloqueio extra de segurança, embora o TextField já limite a escrita nativamente
       setState(() => _nameError = 'O nome não pode ter mais de 20 caracteres');
       hasError = true;
     }
@@ -59,6 +72,8 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
       setState(() => _emailError = 'Por favor, introduza o seu email');
       hasError = true;
     }
+    
+    // O Firebase obriga a que a password tenha pelo menos 6 caracteres!
     if (password.isEmpty) {
       setState(() => _passwordError = 'Por favor, defina uma password');
       hasError = true;
@@ -67,18 +82,22 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
       hasError = true;
     }
 
+    // Se a app encontrou algum erro na verificação acima, pára logo por aqui
     if (hasError) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // Passa o nome para o AuthService
+      // 3. Manda o serviço criar a conta lá na Cloud
+      // Nota que passamos o "name" também! O serviço vai criar a conta e depois atualizar o perfil com esse nome.
       await _authService.registerWithEmailAndPassword(email, password, name);
+      
       if (mounted) {
-        Navigator.pop(context);
-        context.go('/home');
+        Navigator.pop(context); // Fecha esta aba
+        context.go('/home'); // Entra na App!
       }
     } on FirebaseAuthException catch (e) {
+      // 4. Se o Firebase recusar o registo, apanhamos o erro aqui
       setState(() {
         if (e.code == 'email-already-in-use') {
           _emailError = 'Este email já se encontra em utilização';
@@ -89,12 +108,15 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
         }
       });
     } catch (e) {
+      // Erro desconhecido/sem internet
       setState(() => _passwordError = 'Erro ao registar a conta.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // --- REGISTO COM GOOGLE ---
+  // É igualzinho ao login com google. Se a conta não existir, a google cria-a na hora e o utilizador entra.
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
     try {
@@ -110,6 +132,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
     }
   }
 
+  // --- CONTA DE CONVIDADO ---
   Future<void> _loginAsGuest() async {
     setState(() => _isLoading = true);
     try {
@@ -131,6 +154,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Calculamos o padding do teclado para a gaveta deslizar para cima em vez de ficar por trás das teclas
     final keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -144,6 +168,8 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            
+            // O tracinho estético no topo da gaveta
             Center(
               child: Container(
                 width: 40,
@@ -152,23 +178,25 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
               ),
             ),
             const SizedBox(height: 24),
+            
             const Text(
               'Criar Conta 🌿',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: CERESColors.textMain),
             ),
             const SizedBox(height: 20),
 
-            // Campo Nome com limite de 20 caracteres nativo
+            // --- CAMPO NOME ---
             TextField(
               controller: _nameController,
-              maxLength: 20, // Bloqueia automaticamente a digitação a partir de 20 caracteres
+              // O Flutter corta logo a digitação se o utilizador tentar passar dos 20 caracteres
+              maxLength: 20, 
               onChanged: (_) {
                 if (_nameError != null) setState(() => _nameError = null);
               },
               decoration: InputDecoration(
                 hintText: 'Nome',
                 errorText: _nameError,
-                counterText: "", // Esconde o contador numérico nativo para manter o design limpo
+                counterText: "", // Esconde o contador "0/20" que aparece por baixo da caixa
                 prefixIcon: const Icon(Icons.person_outline, color: CERESColors.textSecondary),
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -179,6 +207,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 12),
 
+            // --- CAMPO EMAIL ---
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
@@ -198,6 +227,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 12),
 
+            // --- CAMPO PASSWORD ---
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
@@ -208,6 +238,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
                 hintText: 'Password',
                 errorText: _passwordError,
                 prefixIcon: const Icon(Icons.lock_outline, color: CERESColors.textSecondary),
+                // Botão em forma de olho para ver a password
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: CERESColors.textSecondary),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -221,6 +252,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 24),
 
+            // --- BOTÃO DE REGISTAR ---
             ElevatedButton(
               onPressed: _isLoading ? null : _register,
               style: ElevatedButton.styleFrom(
@@ -235,11 +267,13 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 16),
 
+            // --- LINK PARA VOLTAR AO LOGIN ---
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text('Já tens conta? ', style: TextStyle(color: CERESColors.textSecondary)),
                 GestureDetector(
+                  // A tal função que recebemos no topo do ecrã
                   onTap: widget.onSwitchToLogin,
                   child: const Text('Inicia sessão', style: TextStyle(color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold)),
                 ),
@@ -247,6 +281,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 24),
 
+            // Divisória ( --- ou --- )
             Row(
               children: [
                 Expanded(child: Divider(color: Colors.grey.shade300)),
@@ -259,6 +294,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 24),
 
+            // --- REGISTAR COM GOOGLE ---
             OutlinedButton(
               onPressed: _isLoading ? null : _loginWithGoogle,
               style: OutlinedButton.styleFrom(
@@ -281,6 +317,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet> {
             ),
             const SizedBox(height: 12),
 
+            // --- ENTRAR COMO CONVIDADO ---
             TextButton(
               onPressed: _isLoading ? null : _loginAsGuest,
               child: const Text('Continuar como Convidado', style: TextStyle(color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold)),
