@@ -36,8 +36,11 @@ class WeatherService {
 
       // --- 3. APANHAR A LOCALIZAÇÃO ---
       // Como o Open-Meteo calcula o tempo por zonas grandes (cidades), 
-      // LocationAccuracy.low é perfeito! Descobre onde estamos em 1 segundo e não drena a bateria do telemóvel.
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low);
+      // usar 'LocationAccuracy.low' nas definições (LocationSettings) é perfeito! 
+      // Descobre onde estamos quase instantaneamente e não drena a bateria do telemóvel.
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low)
+      );
       
       // --- 4. A CHAMADA À API DE METEOROLOGIA ---
       // Passamos a nossa latitude e longitude para o Open-Meteo

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/plant_species.dart';
 
+import 'package:flutter/foundation.dart';
+
 // O nosso "Mensageiro" da API
 // Este ficheiro foca-se exclusivamente em ir à net buscar o catálogo mestre de plantas
 class PlantApiService {
@@ -57,7 +59,7 @@ class PlantApiService {
       // Em caso de falta de internet ou link quebrado, protegemos a app
       // não a deixando crashar. Devolvemos só uma lista vazia [] para o ecrã tratar
       // e escrevemos o erro na consola para os developers (nós) vermos.
-      print('Erro de API: $e');
+      debugPrint('Erro de API: $e');
       return [];
     }
   }

@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             title: const Text('Notificações de Rega'), 
             subtitle: const Text('Ativa para testar uma notificação agora!'),
-            activeColor: CERESColors.primaryDarkGreen, 
+            activeThumbColor: CERESColors.primaryDarkGreen, 
             value: _notifications, 
             
             // O que acontece quando o utilizador toca no botão?

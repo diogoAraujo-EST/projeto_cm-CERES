@@ -175,7 +175,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                     const Text('Nível de Iluminação', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedLight,
+                      initialValue: selectedLight,
                       items: ['Muita Luz', 'Luz Média', 'Pouca Luz'].map((String val) {
                         return DropdownMenuItem<String>(value: val, child: Text(val));
                       }).toList(),
@@ -188,7 +188,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                     
                     SwitchListTile(
                       title: const Text('É um espaço exterior?', style: TextStyle(fontWeight: FontWeight.bold, color: CERESColors.textMain)),
-                      activeColor: CERESColors.primaryDarkGreen,
+                      activeThumbColor: CERESColors.primaryDarkGreen,
                       value: isExterior,
                       onChanged: (val) => setModalState(() => isExterior = val),
                     ),

@@ -21,6 +21,7 @@ import 'constants/colors.dart';
 import 'services/notification_service.dart';
 import 'models/user_plant.dart';
 
+
 void main() async {
   // Isto é super importante! Como vamos falar com "o exterior" (Firebase e o sistema 
   // do telemóvel para as notificações) ANTES de a app desenhar o primeiro ecrã, 
@@ -30,13 +31,13 @@ void main() async {
   try {
     // Acorda o Firebase
     await Firebase.initializeApp();
-    print("Firebase inicializado com sucesso!");
+    debugPrint("Firebase inicializado com sucesso!");
     
     // Inicializa o serviço de notificações (Pede permissões e prepara a app para receber alertas)
     await NotificationService().init();
     
   } catch (e) {
-    print("Erro na inicialização: $e");
+    debugPrint("Erro na inicialização: $e");
   }
 
   // Arranca o barco!
