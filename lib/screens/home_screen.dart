@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../constants/colors.dart';
 import '../models/user_plant.dart';
 import '../services/firestore_service.dart';
+import '../services/weather_service.dart'; // O novo serviço de meteorologia que criaste!
+import 'package:geolocator/geolocator.dart';
 
 // Este ecrã é um StatelessWidget porque nós não precisamos de gerir o estado "à mão" com setStates.
 // O StreamBuilder (mais abaixo) faz o trabalho todo de atualizar o ecrã sozinho sempre que o Firebase muda!
@@ -15,7 +17,7 @@ class HomeScreen extends StatelessWidget {
     // Vamos buscar quem está logado e preparamos a ponte para a base de dados
     final user = FirebaseAuth.instance.currentUser;
     final firestoreService = FirestoreService();
-    
+
     // --- LÓGICA DO NOME DO UTILIZADOR ---
     String displayName = 'Utilizador';
     if (user != null) {
@@ -102,7 +104,11 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
+              
+              // --- ALERTA METEOROLÓGICO DA API EXTERNA ---
+              // Colocaste logo abaixo do cabeçalho. Boa escolha de UI! É onde os olhos do utilizador caem primeiro.
+              const WeatherBanner(),
+              
               // --- CORPO PRINCIPAL ---
               Expanded(
                 // Se o utilizador não tiver plantas nenhumas, mostramos um "Empty State" apelativo
@@ -251,6 +257,147 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// --- WIDGET INTELIGENTE DA METEOROLOGIA ---
+// Criaste um widget separado (Stateful) para a meteorologia. Foi uma decisão arquitetural brilhante,
+// porque assim o pedido à API do tempo é isolado e não bloqueia nem atrasa o ecrã inteiro de carregar as plantas!
+class WeatherBanner extends StatefulWidget {
+  const WeatherBanner({super.key});
+
+  @override
+  State<WeatherBanner> createState() => _WeatherBannerState();
+}
+
+class _WeatherBannerState extends State<WeatherBanner> {
+  // A ligação ao teu novo serviço
+  final _weatherService = WeatherService();
+  
+  // Guardamos o Future aqui (e não dentro do build) para garantir que 
+  // o pedido à API só é feito uma vez quando o widget é criado, poupando dados móveis.
+  late Future<String?> _weatherFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inicia a pesquisa pela meteorologia logo que este bloco verdece na memória
+    _weatherFuture = _weatherService.getWeatherAlert();
+  }
+
+  // --- TRATAMENTO DE ERROS DE PERMISSÃO ---
+  // Se o utilizador disser "Sim, podes usar a minha localização", 
+  // nós disparamos a pesquisa outra vez para atualizar o ecrã instantaneamente.
+  void _retryPermission() {
+    setState(() {
+      _weatherFuture = _weatherService.getWeatherAlert();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _weatherFuture,
+      builder: (context, snapshot) {
+        // Enquanto o GPS está a tentar encontrar a pessoa ou a API está a pensar...
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Devolvemos uma caixa vazia (SizedBox.shrink) em vez de um "loading" 
+          // para a app não ficar a piscar por todos os lados.
+          return const SizedBox.shrink(); 
+        }
+
+        final data = snapshot.data;
+
+        // --- CENA DO GPS (A PARTE CHATA) ---
+        // O utilizador pode ter o GPS desligado no telemóvel, ou ter recusado a permissão na app.
+        // Em vez de crasharmos a app, mostramos um aviso cinzento simpático a pedir para ligar.
+        if (data == 'PERMISSION_DENIED' || data == 'LOCATION_DISABLED' || data == 'DENIED_FOREVER') {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.location_off_outlined, color: Colors.grey),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        // Mudamos o texto consoante o tipo de problema que ocorreu
+                        data == 'LOCATION_DISABLED' 
+                          ? 'O GPS do telemóvel está desligado.' 
+                          : 'Para receberes alertas meteorológicos para as tuas plantas, precisamos da tua localização.',
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // O BOTÃO DE RESOLVER O PROBLEMA
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      // Se o utilizador bloqueou para sempre (disse "Não e não voltes a perguntar"), 
+                      // o Geolocator não consegue mostrar o popup. Temos de o mandar para as Definições do telemóvel!
+                      if (data == 'DENIED_FOREVER') {
+                        await Geolocator.openAppSettings();
+                      } else if (data == 'LOCATION_DISABLED') {
+                        // Manda ligar a "Localização" nas definições rápidas do Android
+                        await Geolocator.openLocationSettings();
+                      } else {
+                        // Se for só uma negação simples, tenta pedir outra vez
+                        _retryPermission();
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: CERESColors.primaryDarkGreen),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Permitir Acesso', style: TextStyle(color: CERESColors.primaryDarkGreen, fontWeight: FontWeight.bold)),
+                  ),
+                )
+              ],
+            ),
+          );
+        }
+
+        // --- CENA DO TEMPO (SUCESSO) ---
+        // Temos a localização, falámos com a API e descobrimos que vai chover muito ou fazer bué sol!
+        if (data != null && data.isNotEmpty) {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50, // Fundo laranjinha estilo "Aviso"
+              border: Border.all(color: Colors.amber.shade200),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.wb_cloudy_outlined, color: Colors.orange),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(data, style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.w600, fontSize: 13)),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Se estiver um tempo perfeitamente normal (ex: "Céu limpo, 20 graus"), 
+        // a tua API não devolve nada (data é vazio) e este widget simplesmente "encolhe-se"
+        // e desaparece silenciosamente para não chatear o utilizador com informações inúteis.
+        return const SizedBox.shrink();
+      },
     );
   }
 }
