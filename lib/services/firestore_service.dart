@@ -5,7 +5,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../models/room.dart';
 import '../models/user_plant.dart';
 
-// O nosso serviço principal de comunicação com a Base de Dados (Firestore) e Armazenamento (Storage)
+// O nosso serviço principal de comunicação com a Base de Dados (Firestore) e Armazenamento (Storage).
+// Funciona como o "Bibliotecário" da app: sabe onde guardar as coisas e onde as ir buscar.
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance; // Base de Dados de Texto
   final FirebaseAuth _auth = FirebaseAuth.instance;         // Segurança
@@ -33,12 +34,47 @@ class FirestoreService {
     }
   }
 
+  // --- PERFIL DE UTILIZADOR (Protege o nome contra as alterações do Google) ---
+
+  // Cria ou atualiza o perfil na nossa base de dados (Substitui o que o Google tentar impor)
+  Future<void> saveUserProfile(String name) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    // Guarda APENAS o nome na pasta principal do User. 
+    // TRUQUE DE MESTRE: O SetOptions com "merge: true" garante que editar o nome
+    // não apaga acidentalmente o email, a photoUrl e a data de registo que já lá estavam!
+    await _db.collection('users').doc(user.uid).set({
+      'name': name, // Usamos 'name' para estar igual ao 'name' do createUserDocument
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)); 
+  }
+
+  // Vai buscar o nome à nossa base de dados (se falhar, usa o do Firebase Auth)
+  Future<String?> getUserName() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      final doc = await _db.collection('users').doc(user.uid).get();
+      // Lê exatamente a chave 'name' que escrevemos no documento
+      if (doc.exists && doc.data()!.containsKey('name')) {
+        return doc.data()!['name'] as String;
+      }
+    } catch (e) {
+      // Falha silenciosa para não quebrar a app se não houver internet
+      return null;
+    }
+    // Fallback: Se a nuvem falhar ou o documento não tiver nome, tenta usar o da própria conta (Auth)
+    return user.displayName; 
+  }
+
   // O "Tubo" em tempo real que o ecrã do Perfil fica a ouvir
   Stream<DocumentSnapshot> getUserProfile() {
     final user = _auth.currentUser;
     if (user == null) throw Exception("Utilizador não autenticado");
     
-    // .snapshots() é o que cria a magia do "Tempo Real"
+    // .snapshots() é o que cria a magia do "Tempo Real". Se mudares a foto num ecrã, atualiza em todos!
     return _db.collection('users').doc(user.uid).snapshots();
   }
 
@@ -52,13 +88,13 @@ class FirestoreService {
       final ext = imageFile.path.split('.').last;
       
       // Constrói o caminho da pasta: users -> ID -> profile -> ficheiro
-      // Usamos a data (millisecondsSinceEpoch) para o nome da foto não bater num antigo e bugar o cache!
+      // Usamos a data (millisecondsSinceEpoch) no nome para a foto não bater num URL antigo e ficar "presa" na cache do telemóvel!
       final storageRef = _storage.ref().child('users/${user.uid}/profile/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext');
       
       // Envia fisicamente o ficheiro pesado para a nuvem
       await storageRef.putFile(imageFile);
       
-      // Agora pedimos à nuvem um link público para podermos mostrar na app
+      // Agora pedimos à nuvem um link público para podermos desenhar a imagem na app
       final downloadUrl = await storageRef.getDownloadURL();
 
       // Guarda o link na pasta de texto deste utilizador
@@ -80,7 +116,7 @@ class FirestoreService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // 1. Aponta para a pasta "plants" deste utilizador, mas deixa os parêntesis .doc() vazios
+    // 1. Aponta para a pasta "plants" deste utilizador, mas deixa os parêntesis .doc() vazios.
     // Isto diz ao Firebase: "Por favor, inventa um ID aleatório seguro para mim".
     final docRef = _db.collection('users').doc(user.uid).collection('plants').doc();
     
@@ -97,7 +133,7 @@ class FirestoreService {
       finalImageUrl = await storageRef.getDownloadURL();
     }
 
-    // 3. Prepara a "caixa" com a informação para enviar para os servidores de texto
+    // 3. Prepara a "caixa" (Map) com a informação para enviar para os servidores de texto
     final plantMap = plant.toMap();
     plantMap['imageUrl'] = finalImageUrl;
 
@@ -105,7 +141,7 @@ class FirestoreService {
     await docRef.set(plantMap);
   }
 
-  // Quando o utilizador clica sem querer na foto errada e quer trocar
+  // Quando o utilizador clica na foto da planta e decide trocá-la
   Future<String> updatePlantImage(String plantId, File imageFile) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception("Utilizador não autenticado");
@@ -115,19 +151,19 @@ class FirestoreService {
     await storageRef.putFile(imageFile);
     final downloadUrl = await storageRef.getDownloadURL();
 
-    // Atualiza APENAS o campo "imageUrl" dentro da pasta desta planta
+    // Atualiza APENAS o campo "imageUrl" dentro da pasta desta planta específica
     await _db.collection('users').doc(user.uid).collection('plants').doc(plantId).update({
       'imageUrl': downloadUrl,
     });
 
-    // Devolvemos a String do link para a imagem piscar e atualizar logo no ecrã do utilizador
+    // Devolvemos a String do link para a imagem piscar e atualizar logo no ecrã de detalhes
     return downloadUrl; 
   }
 
-  // O motor dos HomeScreens e Lists: "Dá-me todas as plantas que este gajo tem!"
+  // O motor dos HomeScreens e Lists: "Dá-me todas as plantas que este utilizador tem!"
   Stream<List<UserPlant>> getUserPlants() {
     final user = _auth.currentUser;
-    if (user == null) return Stream.value([]); // Retorna uma lista vazia pacífica se não houver user
+    if (user == null) return Stream.value([]); // Retorna uma lista vazia pacífica se não houver user logado
 
     return _db
         .collection('users')
@@ -135,7 +171,7 @@ class FirestoreService {
         .collection('plants')
         .snapshots() // Ouve as alterações do Firebase sempre que algo muda (Tempo real!)
         // O "map" traduz a linguagem estranha de documentos do Firebase para a nossa linguagem 
-        // Dart limpa (UserPlant), um por um.
+        // Dart estruturada (UserPlant), um por um.
         .map((snapshot) => snapshot.docs.map((doc) => UserPlant.fromFirestore(doc)).toList());
   }
 
@@ -145,10 +181,10 @@ class FirestoreService {
     if (user == null) return;
 
     await _db.collection('users').doc(user.uid).collection('plants').doc(plantId).update({
-      // 1. Atualiza a data da última rega para AGORA
+      // 1. Atualiza a data da última rega para a hora certa do servidor (AGORA)
       'lastWatered': FieldValue.serverTimestamp(),
-      // 2. arrayUnion pega no Histórico inteiro e empurra uma nova data lá para dentro.
-      // (É isto que depois permite aos gráficos das Estatísticas funcionarem!!)
+      // 2. O arrayUnion pega no Histórico inteiro e empurra uma nova data lá para dentro, sem apagar as antigas!
+      // (É isto que permite aos gráficos das Estatísticas funcionarem perfeitamente)
       'wateringHistory': FieldValue.arrayUnion([Timestamp.now()])
     });
   }
@@ -158,7 +194,7 @@ class FirestoreService {
     final user = _auth.currentUser;
     if (user == null) return;
     
-    // Basta apontar a arma ao documento e premir o gatilho (.delete())
+    // Basta apontar o caminho ao documento e invocar o .delete()
     await _db.collection('users').doc(user.uid).collection('plants').doc(plantId).delete();
   }
 
@@ -171,7 +207,7 @@ class FirestoreService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    // .add() é outra forma de gerar um ID aleatório à pressa e guardar logo lá dentro
+    // .add() é outra forma de dizer ao Firebase para gerar um ID aleatório à pressa e guardar logo lá dentro
     await _db.collection('users').doc(user.uid).collection('rooms').add({
       'name': name,
       'lightLevel': lightLevel,
@@ -180,7 +216,7 @@ class FirestoreService {
     });
   }
 
-  // Vai buscar as divisões do utilizador (usado quando crias a planta para preencher os "botõezinhos/chips" de escolha)
+  // Vai buscar as divisões do utilizador (usado quando crias a planta para preencher os "chips" de escolha rápida)
   Stream<List<Room>> getUserRooms() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value([]);
@@ -189,7 +225,7 @@ class FirestoreService {
         .collection('users')
         .doc(user.uid)
         .collection('rooms')
-        .orderBy('createdAt') // Garante que a divisão mais antiga aparece primeiro (A ordem da casa não muda do nada)
+        .orderBy('createdAt') // Garante que a divisão mais antiga aparece primeiro (A ordem dos botões na UI não muda do nada)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
               final data = doc.data();
