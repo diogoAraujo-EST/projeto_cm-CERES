@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/colors.dart';
 import '../services/notification_service.dart';
 
-// É um StatefulWidget porque temos aqueles botões de "ligar/desligar" (switches)
-// e precisamos de atualizar o ecrã instantaneamente quando o utilizador toca neles.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -13,11 +12,16 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Variáveis que controlam os "switches" (botões de alternar)
-  bool _notifications = false; // Começa desligado até o utilizador darmos permissão
+  // Estados locais dos botões (switches)
+  bool _notifications = false;
+  bool _darkMode = false;
   
   // Instância do nosso serviço que fala com o sistema de notificações do telemóvel
   final NotificationService _notificationService = NotificationService();
+  
+  // Usamos "late" porque não conseguimos dar um valor a esta variável no momento exato 
+  // em que o ecrã é desenhado (precisamos de "esperar" pelo telemóvel no initState).
+  late SharedPreferences _prefs; // Instância da persistência local
 
   @override
   void initState() {
@@ -25,6 +29,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Assim que a pessoa abre o ecrã de configurações, pedimos autorização nativa
     // (Aquele pop-up do telemóvel a perguntar "A app CERES quer enviar-te notificações. Permitir?")
     _notificationService.requestPermissions();
+    // Assim que o ecrã abre, vamos ao disco do telemóvel ver como estavam os botões da última vez
+    _loadPreferences(); 
+  }
+
+  // --- PERSISTÊNCIA LOCAL (SHARED PREFERENCES) ---
+  // O SharedPreferences é como uma pequena gaveta local no telemóvel onde podemos 
+  // guardar definições simples sem usar internet nem bases de dados complexas.
+  Future<void> _loadPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Tenta ler o valor da gaveta. 
+      // Se não existir nada lá dentro (ex: primeira vez que a pessoa abre a app), assume 'false' (?? false).
+      _notifications = _prefs.getBool('notifications_enabled') ?? false;
+      _darkMode = _prefs.getBool('dark_mode_enabled') ?? false;
+    });
+  }
+
+  // Guarda a preferência de notificações
+  Future<void> _saveNotificationPreference(bool value) async {
+    setState(() => _notifications = value); // Atualiza a UI visualmente na hora
+    await _prefs.setBool('notifications_enabled', value); // Grava a escolha na memória física do telemóvel
+  }
+
+  // Guarda a preferência do Modo Escuro
+  Future<void> _saveDarkModePreference(bool value) async {
+    setState(() => _darkMode = value);
+    await _prefs.setBool('dark_mode_enabled', value); // Grava no telemóvel
   }
 
   @override
@@ -45,22 +76,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(24),
         children: [
           
-          // --- BOTÃO DE NOTIFICAÇÕES ---
-          // O SwitchListTile é fantástico porque combina o texto (title), a explicação (subtitle)
-          // e o botão de ligar/desligar (switch) tudo numa só linha organizada.
+          // --- TOGGLE NOTIFICAÇÕES ---
           SwitchListTile(
             title: const Text('Notificações de Rega'), 
             subtitle: const Text('Ativa para testar uma notificação agora!'),
             activeThumbColor: CERESColors.primaryDarkGreen, 
             value: _notifications, 
-            
-            // O que acontece quando o utilizador toca no botão?
             onChanged: (val) {
-              // 1. Muda a bolinha para a direita (verde)
-              setState(() => _notifications = val);
+              _saveNotificationPreference(val); // Grava localmente em vez de usar apenas setState
               
-              // 2. SE O UTILIZADOR LIGOU O BOTÃO (val == true)...
-              // Aproveitamos para fazer uma demonstração ao vivo de como as notificações funcionam!
+              // Se a pessoa ligou o botão, dispara a notificação de teste!
               if (val) {
                 _notificationService.showInstantNotification(
                   title: '🌿 Hora de Regar!',
@@ -70,12 +95,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }
           ),
           
-          const Divider(height: 40), // Linha separadora elegante
+          // --- TOGGLE MODO ESCURO ---
+          SwitchListTile(
+            title: const Text('Modo Escuro (Dark Mode)'), 
+            activeThumbColor: CERESColors.primaryDarkGreen, 
+            value: _darkMode, 
+            onChanged: (val) {
+              _saveDarkModePreference(val); // Grava localmente
+              
+              // Truque de UI/UX (Graceful degradation): Mostra a opção (gera curiosidade), 
+              // mas avisa o utilizador de forma simpática que a funcionalidade ainda está no forno.
+              if (val) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tema escuro não desenvolvido nesta versão. Fica atento às próximas atualizações!')));
+              }
+            }
+          ),
           
-          // --- LINK PARA EDITAR O PERFIL ---
+          const Divider(height: 40),
+          
+          // --- EDITAR PERFIL ---
           ListTile(
             title: const Text('Editar Perfil'), 
-            trailing: const Icon(Icons.chevron_right), // Setinha à direita
+            trailing: const Icon(Icons.chevron_right), 
             onTap: () {
               // Salta para a página de edição de nome/password!
               context.push('/edit-profile');
