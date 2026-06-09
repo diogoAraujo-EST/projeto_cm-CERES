@@ -82,12 +82,12 @@ class HomeScreen extends StatelessWidget {
                                       } 
                                       // Se falhar o nome da base de dados, tenta usar o que está na conta Google/Auth
                                       else if (user?.displayName != null && user!.displayName!.isNotEmpty) {
-                                        finalName = user!.displayName!;
+                                        finalName = user.displayName!;
                                       }
                                     } 
                                     // 3. Fallback de segurança (Auth puro)
                                     else if (user?.displayName != null && user!.displayName!.isNotEmpty) {
-                                      finalName = user!.displayName!;
+                                      finalName = user.displayName!;
                                     }
                                     
                                     return Text(

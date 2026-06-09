@@ -23,7 +23,7 @@ class PlantsScreen extends StatelessWidget {
         elevation: 0,
         title: const Text('As Minhas Plantas', style: TextStyle(color: CERESColors.textMain, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        actions: [
+/*         actions: [
           // Botão de pesquisa
           IconButton(
             icon: const Icon(Icons.search, color: CERESColors.textMain),
@@ -33,7 +33,7 @@ class PlantsScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Barra de pesquisa a ser implementada...')));
             },
           ),
-        ],
+        ], */
       ),
       
       // --- CORPO DA PÁGINA (A LISTA VIVA) ---
