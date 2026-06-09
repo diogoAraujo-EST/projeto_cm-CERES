@@ -74,9 +74,13 @@ Para testar o código fonte na sua máquina local, certifique-se de que tem o Fl
    flutter run
    ```
 
-### ⚠️ **Nota de Segurança (Google Sign-In):** 
+##### ⚠️ **Nota de Segurança (Google Sign-In):** 
 O sistema de segurança da Google exige que a chave `SHA-1` da máquina que compila o código esteja registada na consola do Firebase. Caso corra a aplicação a partir de uma máquina não registada na nossa consola (ex: PC do professor), o método *Google Sign-In* será bloqueado por segurança.
 
+##### 🔒 **Nota de Segurança (Repositório Privado):**
+Por questões de cibersegurança e de forma a evitar a exposição não intencional de credenciais na nuvem, o repositório deste projeto foi configurado como **Privado**. O código-fonte integra o ficheiro `google-services.json`, o qual contém as chaves e os identificadores que ligam a aplicação local diretamente à infraestrutura *Premium* (Plano Blaze) da nossa base de dados Firebase. 
+
+De forma a garantir a compilação fluida do projeto na máquina de avaliação (evitando a necessidade de injeção manual de variáveis de ambiente por parte do corpo docente), as credenciais foram mantidas no código-fonte seguro. O acesso ao repositório para consulta e download do projeto é feito em regime de acesso concedido (como *Collaborator*).
 
 
 ## 👨‍💻 Equipa de Desenvolvimento
